@@ -13,6 +13,13 @@ pipeline {
         NEXUS_REPOSITORY = "maven-releases"
         NEXUS_CREDENTIAL_ID = "NEXUS_CRED"
         ARTIFACT_VERSION = "${BUILD_NUMBER}"
+ // Environment variables for Docker
+        DOCKER_CREDENTIALS_ID = "docker-hub-creds"
+        DOCKER_IMAGE = "chedli1/greenspace"
+        DOCKER_TAG = "v1.0.0-${BUILD_NUMBER}"
+        DOCKER_COMPOSE_FILE = "docker-compose.yml"  
+        EMAIL_RECIPIENT = 'chdouuulaa@gmail.com'  
+        EMAIL_SUBJECT = 'Jenkins Build Notification'
     }
 
     stages {
@@ -81,6 +88,25 @@ pipeline {
                 }
             }
         }
+        stage("Download Artifact from Nexus") {
+           
+            steps {
+                dir('app') {
+                script {
+                    def artifactGroup = 'com.demo'
+                    def artifactName = 'greenspace'
+                    def artifactVersion = 'v2.0'
+                    def artifactExtension = 'jar'
+
+                    def nexusArtifactURL = "${NEXUS_PROTOCOL}://${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/${artifactGroup.replace('.', '/')}/${artifactName}/${artifactVersion}/${artifactName}-${artifactVersion}.${artifactExtension}"
+
+                    withCredentials([usernamePassword(credentialsId: NEXUS_CREDENTIAL_ID, passwordVariable: 'NEXUS_PASSWORD', usernameVariable: 'NEXUS_USERNAME')]) {
+                        sh "curl -u ${NEXUS_USERNAME}:${NEXUS_PASSWORD} -o ${artifactName}.jar ${nexusArtifactURL}"  // Download the artifact
+                    }
+                }
+            }
+        }
+       }
     }
 
     post {
