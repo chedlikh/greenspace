@@ -1,7 +1,18 @@
 pipeline {
     agent any
+
     tools {
         maven 'M2_HOME'  // Specify the Maven tool version, make sure the name matches the tool configured in Jenkins
+    }
+
+    environment {
+        // Environment variables for Nexus
+        NEXUS_VERSION = "nexus3"
+        NEXUS_PROTOCOL = "http"
+        NEXUS_URL = "http://192.168.33.10:8081" 
+        NEXUS_REPOSITORY = "maven-releases"
+        NEXUS_CREDENTIAL_ID = "NEXUS_CRED"
+        ARTIFACT_VERSION = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -19,7 +30,7 @@ pipeline {
                 script {
                     dir('app') {
                         // Run the Maven build command: clean, compile, and package
-                        sh 'mvn clean compile '
+                        sh 'mvn clean compile package'
                         
                         // Optional: List the contents of the target directory for verification
                         sh 'ls -la target'
@@ -27,16 +38,49 @@ pipeline {
                 }
             }
         }
+
         stage("SonarQube Analysis") {
             steps {
-            dir('app') {
-                withSonarQubeEnv('sq1') {
-                    sh 'mvn sonar:sonar'  // Run SonarQube analysis
-                 }
+                dir('app') {
+                    withSonarQubeEnv('sq1') {
+                        // Run SonarQube analysis
+                        sh 'mvn sonar:sonar'
+                    }
                 }
             }
         }
 
+        stage("Publish to Nexus") {
+            steps {
+                dir('app') {
+                    script {
+                        def pom = readMavenPom file: "pom.xml"
+                        def filesByGlob = findFiles(glob: "target/*.${pom.packaging}")
+                        def artifactPath = filesByGlob[0]?.path  // Safe access with optional chaining
+                        def artifactExists = fileExists(artifactPath)
+
+                        if (artifactExists) {
+                            echo "*** Publishing artifact: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version: ${pom.version}"
+
+                            nexusArtifactUploader(
+                                nexusVersion: NEXUS_VERSION,
+                                protocol: NEXUS_PROTOCOL,
+                                nexusUrl: NEXUS_URL,
+                                groupId: pom.groupId,
+                                version: ARTIFACT_VERSION,
+                                repository: NEXUS_REPOSITORY,
+                                credentialsId: NEXUS_CREDENTIAL_ID,
+                                artifacts: [
+                                    [artifactId: pom.artifactId, classifier: '', file: artifactPath, type: pom.packaging]
+                                ]
+                            )
+                        } else {
+                            error "*** File: ${artifactPath}, could not be found"
+                        }
+                    }
+                }
+            }
+        }
     }
 
     post {
