@@ -9,7 +9,7 @@ pipeline {
             steps {
                 script {
                     // Check out the specified branch from the GitHub repository
-                    git branch: 'chedli', url: 'https://github.com/chedlikh/greenspace.git'
+                    git branch: 'main', url: 'https://github.com/chedlikh/greenspace.git'
                 }
             }
         }
