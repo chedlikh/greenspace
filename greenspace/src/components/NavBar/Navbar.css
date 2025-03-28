@@ -1,0 +1,30 @@
+.dropdown-menu-settings {
+    background-color: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+  }
+  
+  .settings-button {
+    cursor: pointer;
+  }
+  
+  .dropdown-menu-settings ul {
+    padding: 0;
+    list-style-type: none;
+  }
+  
+  .dropdown-menu-settings label {
+    display: block;
+    padding: 8px 0;
+  }
+  .dropdown-menu-settings {
+    background-color: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none; /* Initially hidden */
+  }
+  
+  .dropdown-menu-settings.show {
+    display: block; /* Make visible when the state is set */
+  }
+  

@@ -1,0 +1,14 @@
+# Ignore node_modules and build files
+greenspace/node_modules/
+greenspace/dist/
+
+# Ignore app dependencies (if using Java)
+app/target/
+app/.idea/
+app/.classpath
+app/.project
+app/.settings/
+
+# General ignores
+.DS_Store
+.env
