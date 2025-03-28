@@ -1,0 +1,38 @@
+pipeline {
+    agent any
+    tools {
+        maven 'M2_HOME'  // Specify the Maven tool version, make sure the name matches the tool configured in Jenkins
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    // Check out the specified branch from the GitHub repository
+                    git branch: 'chedli', url: 'https://github.com/chedlikh/kaddem.git'
+                }
+            }
+        }
+
+        stage('Maven Build') {
+            steps {
+                script {
+                    // Run the Maven build command: clean, compile, and package
+                    sh 'mvn clean compile package'
+                    
+                    // Optional: List the contents of the target directory for verification
+                    sh 'ls -la target'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build completed successfully!'
+        }
+        failure {
+            echo 'Build failed.'
+        }
+    }
+}
