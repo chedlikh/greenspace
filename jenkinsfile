@@ -30,10 +30,9 @@ pipeline {
                 script {
                     dir('app') {
                         // Run the Maven build command: clean, compile, and package
-                        sh 'mvn clean'
+                        sh 'mvn clean compile package'
                         
-                        // Optional: List the contents of the target directory for verification
-                        sh 'ls -la target'
+                       
                     }
                 }
             }
@@ -83,3 +82,4 @@ pipeline {
         }
     }
 }
+
