@@ -32,13 +32,23 @@ pipeline {
                         // Run the Maven build command: clean, compile, and package
                         sh 'mvn clean compile package'
                         
-                       
+                        // Optional: List the contents of the target directory for verification
+                        sh 'ls -la target'
                     }
                 }
             }
         }
 
-       
+        stage("SonarQube Analysis") {
+            steps {
+                dir('app') {
+                    withSonarQubeEnv('sq1') {
+                        // Run SonarQube analysis
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
 
         stage("Publish to Nexus") {
             steps {
