@@ -1,13 +1,159 @@
 pipeline {
-    agent any
+   agent any
+
+    tools {
+        maven 'M2_HOME'
+    }
+
+    environment {
+        // Nexus variables
+        NEXUS_VERSION = "nexus3"
+        NEXUS_PROTOCOL = "http"
+        NEXUS_URL = "192.168.33.10:8081" 
+        NEXUS_REPOSITORY = "maven-releases"
+        NEXUS_CREDENTIAL_ID = "NEXUS_CRED"
+        ARTIFACT_VERSION = "${BUILD_NUMBER}"
+        
+        // Docker variables
+        DOCKER_CREDENTIALS_ID = "docker-hub-creds"
+        DOCKER_IMAGE = "chedli1/greenspace"
+        DOCKER_TAG = "v1.0.0-${BUILD_NUMBER}"
+        EMAIL_RECIPIENT = 'chdouuulaa@gmail.com'
+        EMAIL_SUBJECT = 'Jenkins Build Notification'
+    }
+
     stages {
-        stage('Test Docker') {
+        stage('Checkout') {
             steps {
                 script {
-                    sh 'docker --version'
-                    sh 'docker ps'
+                    git branch: 'main', url: 'https://github.com/chedlikh/greenspace.git'
                 }
             }
+        }
+
+        stage('Maven Build') {
+            steps {
+                script {
+                    dir('app') {
+                        sh 'mvn clean compile package'
+                        sh 'ls -la target'
+                    }
+                }
+            }
+        }
+
+        stage("SonarQube Analysis") {
+            steps {
+                dir('app') {
+                    withSonarQubeEnv('sq1') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
+
+        stage("Publish to Nexus") {
+            steps {
+                dir('app') {
+                    script {
+                        def pom = readMavenPom file: "pom.xml"
+                        def filesByGlob = findFiles(glob: "target/*.${pom.packaging}")
+                        def artifactPath = filesByGlob[0]?.path
+                        def artifactExists = fileExists(artifactPath)
+
+                        if (artifactExists) {
+                            echo "Publishing artifact: ${artifactPath}"
+                            echo "Group: ${pom.groupId}, Version: ${ARTIFACT_VERSION}"
+
+                            nexusArtifactUploader(
+                                nexusVersion: NEXUS_VERSION,
+                                protocol: NEXUS_PROTOCOL,
+                                nexusUrl: NEXUS_URL,
+                                groupId: pom.groupId,
+                                version: ARTIFACT_VERSION,
+                                repository: NEXUS_REPOSITORY,
+                                credentialsId: NEXUS_CREDENTIAL_ID,
+                                artifacts: [
+                                    [artifactId: pom.artifactId, classifier: '', file: artifactPath, type: pom.packaging]
+                                ]
+                            )
+                        } else {
+                            error "Artifact not found at: ${artifactPath}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("Download Artifact from Nexus") {
+            steps {
+                dir('app') {
+                    script {
+                        def pom = readMavenPom file: "pom.xml"
+                        def downloadPath = "${pom.groupId.replace('.', '/')}/${pom.artifactId}/${ARTIFACT_VERSION}"
+                        def artifactFile = "${pom.artifactId}-${ARTIFACT_VERSION}.${pom.packaging}"
+                        def nexusUrl = "${NEXUS_PROTOCOL}://${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/${downloadPath}/${artifactFile}"
+
+                        withCredentials([usernamePassword(
+                            credentialsId: NEXUS_CREDENTIAL_ID,
+                            passwordVariable: 'NEXUS_PASSWORD',
+                            usernameVariable: 'NEXUS_USERNAME'
+                        )]) {
+                            // Secure way to handle credentials in curl
+                            sh """
+                                curl -u \$NEXUS_USERNAME:\$NEXUS_PASSWORD \
+                                -o downloaded-${artifactFile} \
+                                ${nexusUrl}
+                            """
+                        }
+                        
+                        // Verify download
+                        if (!fileExists("downloaded-${artifactFile}")) {
+                            error "Failed to download artifact from Nexus"
+                        }
+                        echo "Successfully downloaded artifact: downloaded-${artifactFile}"
+                    }
+                }
+            }
+        }
+
+        stage("Build and Push Docker Image") {
+            steps {
+                script {
+                    dir('app') {
+                        // Build Docker image
+                        sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                        
+                        // Login to Docker Hub securely
+                        withCredentials([usernamePassword(
+                            credentialsId: DOCKER_CREDENTIALS_ID,
+                            passwordVariable: 'DOCKER_PASSWORD',
+                            usernameVariable: 'DOCKER_USERNAME'
+                        )]) {
+                            sh """
+                                echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
+                            """
+                        }
+                        
+                        // Push to Docker Hub
+                        sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        
+                        // Clean up
+                        sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+            // mail to: env.EMAIL_RECIPIENT, subject: env.EMAIL_SUBJECT, body: 'Build succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+            // mail to: env.EMAIL_RECIPIENT, subject: env.EMAIL_SUBJECT, body: 'Build failed!'
         }
     }
 }
