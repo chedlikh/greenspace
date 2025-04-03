@@ -9,6 +9,6 @@ RUN ping -c 4 repo.maven.apache.org || echo "Maven Central not reachable"
 # Stage 2: Run the application
 FROM openjdk:17
 WORKDIR /app
-COPY --from=builder /app/target/app.jar app.jar
+COPY --from=builder /app/target/app-0.0.1-SNAPSHOT.jar app-0.0.1-SNAPSHOT.jar
 EXPOSE 8089
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app-0.0.1-SNAPSHOT.jar"]
