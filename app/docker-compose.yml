@@ -7,7 +7,7 @@ services:
     container_name: mysql-container
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: greenspacedb
+      MYSQL_DATABASE: greenSpacedb
     ports:
       - "3306:3306"
     volumes:
@@ -40,9 +40,9 @@ services:
        - "8089:8089" 
     environment:
       SPRING_APPLICATION_JSON: '{
-        "spring.datasource.url": "jdbc:mysql://mysqldb:3306/greenspacedb",
+        "spring.datasource.url": "jdbc:mysql://192.168.33.10:3306/greenSpacedb?createDatabaseIfNotExist=true&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Europe/Paris",
         "spring.datasource.username": "root",
-        "spring.datasource.password": null,
+        "spring.datasource.password": root,
         "spring.jpa.properties.hibernate.dialect": "org.hibernate.dialect.MySQL5InnoDBDialect",
         "spring.jpa.hibernate.ddl-auto": "update"
       }'
