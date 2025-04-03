@@ -7,7 +7,7 @@ RUN mvn clean package -DskipTests
 RUN ping -c 4 repo.maven.apache.org || echo "Maven Central not reachable"
 
 # Stage 2: Run the application
-FROM openjdk:11
+FROM openjdk:17
 WORKDIR /app
 COPY --from=builder /app/target/app.jar app.jar
 EXPOSE 8089
