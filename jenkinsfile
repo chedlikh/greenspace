@@ -27,7 +27,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    sh 'docker compose version'
+                    sh 'docker compose --version'
                     sh 'docker ps'
                     git branch: 'main', url: 'https://github.com/chedlikh/greenspace.git'
                 }
