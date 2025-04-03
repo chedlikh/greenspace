@@ -145,6 +145,15 @@ pipeline {
                 }
             }
         }
+         stage('Start Services with Docker Compose') {
+         steps {
+            script {
+               dir('app') {
+               sh 'docker-compose up -d'
+             }
+            }
+         }
+      }
     }
 
     post {
