@@ -120,7 +120,7 @@ pipeline {
         stage("Build and Push Docker Image") {
             steps {
                 script {
-                    dir('app') {
+                   
                         // Build Docker image
                         sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
                         
@@ -140,7 +140,7 @@ pipeline {
                         
                         // Clean up
                         sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                    }
+                    
                 }
             }
         }
