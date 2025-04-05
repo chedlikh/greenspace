@@ -8,12 +8,18 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: greenSpacedb
+      TZ: Europe/Paris
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
       - mynetwork
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
   # phpMyAdmin Service
   phpmyadmin:
@@ -26,20 +32,26 @@ services:
     ports:
       - "8099:80"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - mynetwork
 
-  # Your Project Service (Java application with Docker)
+  # Your Project Service
   myproject:
     build:
       context: .
-      dockerfile: Dockerfile 
+      dockerfile: Dockerfile
     container_name: greenspace
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/greenSpacedb?createDatabaseIfNotExist=true&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Europe/Paris
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
     ports:
-       - "8089:8089" 
+      - "8089:8089"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - mynetwork
 
