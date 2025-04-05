@@ -1,70 +1,49 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-container
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: greenSpacedb
-      MYSQL_USER: greenspace_user
-      MYSQL_PASSWORD: greenspace_pass
-      TZ: Europe/Paris
-    command: [
-      "--default-authentication-plugin=mysql_native_password",
-      "--character-set-server=utf8mb4",
-      "--collation-server=utf8mb4_unicode_ci",
-      "--init-command=CREATE USER IF NOT EXISTS 'greenspace_user'@'%' IDENTIFIED BY 'greenspace_pass'; GRANT ALL ON greenSpacedb.* TO 'greenspace_user'@'%'; FLUSH PRIVILEGES;"
-    ]
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-    networks:
-      - mynetwork
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -uroot -proot --silent || exit 1"]
-      interval: 10s
-      timeout: 20s
-      retries: 30
+  mysqldb:
+    image: mysql:5.7
     restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=greenSpacedb
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbs:/var/lib/mysql
+
+  app:
+    container_name: greenSpace
+    depends_on:
+      - mysqldb
+    build:
+      context: .
+      dockerfile: Dockerfile  
+    restart: on-failure
+    ports:
+      - "8089:8089"
+    environment:
+      SPRING_APPLICATION_JSON: '{
+        "spring.datasource.url": "jdbc:mysql://mysqldb:3306/greenSpacedb",
+        "spring.datasource.username": "root",
+        "spring.datasource.password": null,
+        "spring.jpa.properties.hibernate.dialect": "org.hibernate.dialect.MySQL5InnoDBDialect",
+        "spring.jpa.hibernate.ddl-auto": "update"
+      }'
+    stdin_open: true
+    tty: true
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
-    container_name: phpmyadmin-container
+    restart: unless-stopped
+    depends_on:
+      - mysqldb
     environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: root
+      - PMA_HOST=mysqldb
+      - PMA_USER=root
+      - PMA_PASSWORD=root
     ports:
       - "8099:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - mynetwork
-
-  myproject:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: greenspace
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/greenSpacedb?useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true&serverTimezone=Europe/Paris
-      SPRING_DATASOURCE_USERNAME: greenspace_user
-      SPRING_DATASOURCE_PASSWORD: greenspace_pass
-    ports:
-      - "8089:8089"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - mynetwork
 
 volumes:
-  mysql-data:
-
-networks:
-  mynetwork:
-    driver: bridge
+  dbs:
