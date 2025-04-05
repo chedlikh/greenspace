@@ -4,46 +4,66 @@ services:
   mysqldb:
     image: mysql:5.7
     restart: unless-stopped
+    command: 
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-ssl
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=greenSpacedb
+      - TZ=UTC
     ports:
       - "3307:3306"
     volumes:
-      - dbs:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -uroot -proot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   app:
     container_name: greenSpace
     depends_on:
-      - mysqldb
+      mysqldb:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile  
-    restart: on-failure
+    restart: unless-stopped
     ports:
       - "8089:8089"
     environment:
       SPRING_APPLICATION_JSON: '{
-        "spring.datasource.url": "jdbc:mysql://mysqldb:3306/greenSpacedb",
+        "spring.datasource.url": "jdbc:mysql://mysqldb:3306/greenSpacedb?useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=true&serverTimezone=UTC",
         "spring.datasource.username": "root",
-        "spring.datasource.password": null,
+        "spring.datasource.password": "root",
         "spring.jpa.properties.hibernate.dialect": "org.hibernate.dialect.MySQL5InnoDBDialect",
         "spring.jpa.hibernate.ddl-auto": "update"
       }'
-    stdin_open: true
-    tty: true
+    volumes:
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     restart: unless-stopped
     depends_on:
-      - mysqldb
+      mysqldb:
+        condition: service_healthy
     environment:
       - PMA_HOST=mysqldb
+      - PMA_PORT=3306
       - PMA_USER=root
       - PMA_PASSWORD=root
+      - UPLOAD_LIMIT=128M
     ports:
       - "8099:80"
 
 volumes:
-  dbs:
+  mysql_data:
