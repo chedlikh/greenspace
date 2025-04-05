@@ -1,34 +1,51 @@
 version: '3.8'
 
 services:
-  # MySQL Service
   mysql:
     image: mysql:8.0
     container_name: mysql-container
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: greenSpacedb
+      MYSQL_USER: greenspace_user  # Dedicated application user
+      MYSQL_PASSWORD: greenspace_pass
       TZ: Europe/Paris
+      MYSQL_ROOT_HOST: '%'  # Allow root access from any host
+    command: 
+      - --default-authentication-plugin=mysql_native_password  # Required for MySQL 8
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=200
+      - --wait_timeout=28800
+      - --interactive_timeout=28800
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql  # Initialization script
     networks:
       - mynetwork
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
+      test: ["CMD-SHELL", "mysqladmin ping -uroot -proot --silent || exit 1"]
+      interval: 10s
+      timeout: 20s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    restart: unless-stopped
 
-  # phpMyAdmin Service
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin-container
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: root
+      PMA_USER: root
+      PMA_PASSWORD: root
+      UPLOAD_LIMIT: 128M  # Increased upload limit
     ports:
       - "8099:80"
     depends_on:
@@ -36,17 +53,19 @@ services:
         condition: service_healthy
     networks:
       - mynetwork
+    restart: unless-stopped
 
-  # Your Project Service
   myproject:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: greenspace
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/greenSpacedb?createDatabaseIfNotExist=true&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=Europe/Paris
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/greenSpacedb?useSSL=false&allowPublicKeyRetrieval=true&autoReconnect=true&failOverReadOnly=false&maxReconnects=10&serverTimezone=Europe/Paris
+      SPRING_DATASOURCE_USERNAME: greenspace_user  # Using dedicated user
+      SPRING_DATASOURCE_PASSWORD: greenspace_pass
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseContainerSupport -Djava.security.egd=file:/dev/./urandom"
     ports:
       - "8089:8089"
     depends_on:
@@ -54,10 +73,30 @@ services:
         condition: service_healthy
     networks:
       - mynetwork
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./logs:/app/logs  # Persistent logs
+      - ./uploads:/app/uploads  # Persistent uploads
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+    restart: unless-stopped
 
 volumes:
   mysql-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/mysql-data
+      o: bind
 
 networks:
   mynetwork:
     driver: bridge
+    attachable: true
