@@ -1,4 +1,4 @@
-pipeline {
+ pipeline {
    agent any
 
     tools {
@@ -23,20 +23,27 @@ pipeline {
         EMAIL_SUBJECT = 'Jenkins Build Notification'
     }
 
-   
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    sh 'docker compose version'
+                    sh 'docker ps'
+                    git branch: 'main', url: 'https://github.com/chedlikh/greenspace.git'
+                }
+            }
+        }
 
         stage('Maven Build') {
             steps {
                 script {
                     dir('app') {
                         sh 'mvn clean compile package'
-                        
+                        sh 'ls -la target'
                     }
                 }
             }
         }
-
-       
 
         stage("Publish to Nexus") {
             steps {
