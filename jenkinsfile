@@ -16,7 +16,7 @@ pipeline {
         
         // Docker variables
         DOCKER_CREDENTIALS_ID = "docker-hub-creds"
-        DOCKER_IMAGE = "chedli1/greenspace"
+        DOCKER_IMAGE = "chdoula1/greenspace"
         DOCKER_COMPOSE_FILE = "docker-compose.yml"
         DOCKER_TAG = "v1.0.0-${BUILD_NUMBER}"
         EMAIL_RECIPIENT = 'chdouuulaa@gmail.com'
