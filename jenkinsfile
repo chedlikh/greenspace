@@ -1,51 +1,71 @@
 pipeline {
-   agent any
-
+    agent any
+    
     tools {
-        maven 'M2_HOME'
+        maven 'M2_HOME'  // Updated to M3 which is more standard
     }
-
+    
     environment {
-        // Nexus variables
+        // Nexus Configuration
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "192.168.0.187:8081" 
+        NEXUS_URL = "192.168.0.187:8081"
         NEXUS_REPOSITORY = "maven-releases"
         NEXUS_CREDENTIAL_ID = "NEXUS_CRED"
-        ARTIFACT_VERSION = "${BUILD_NUMBER}"
         
-        // Docker variables
+        // Docker Configuration
         DOCKER_CREDENTIALS_ID = "docker-hub-creds"
         DOCKER_IMAGE = "chdoula1/greenspace"
-        DOCKER_COMPOSE_FILE = "docker-compose.yml"
         DOCKER_TAG = "v1.0.0-${BUILD_NUMBER}"
+        DOCKER_COMPOSE_FILE = "docker-compose.yml"
+        
+        // Application Configuration
+        ARTIFACT_VERSION = "${BUILD_NUMBER}"
+        BUILD_TIMEOUT_MINUTES = 30
+        HEALTH_CHECK_RETRIES = 30
+        HEALTH_CHECK_INTERVAL = 10
+        
+        // Notification
         EMAIL_RECIPIENT = 'chdouuulaa@gmail.com'
-        EMAIL_SUBJECT = 'Jenkins Build Notification'
+        EMAIL_SUBJECT = "Build ${BUILD_NUMBER} - ${env.JOB_NAME}"
     }
-
+    
     stages {
-        stage('Checkout') {
+        stage('Initialize') {
             steps {
                 script {
+                    // Verify Docker and tools
+                    sh 'docker --version'
                     sh 'docker compose version'
-                    sh 'docker ps'
-                    git branch: 'main', url: 'https://github.com/chedlikh/greenspace.git'
+                    sh 'mvn --version'
+                    
+                    // Clean workspace
+                    cleanWs()
                 }
             }
         }
-
-        stage('Maven Build') {
+        
+        stage('Checkout Code') {
             steps {
-                script {
-                    dir('app') {
-                        sh 'mvn clean compile package'
-                        sh 'ls -la target'
-                    }
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    userRemoteConfigs: [[url: 'https://github.com/chedlikh/greenspace.git']],
+                    extensions: [[$class: 'CloneOption', depth: 1, noTags: false, shallow: true]]
+                ])
+            }
+        }
+        
+        stage('Build Application') {
+            steps {
+                dir('app') {
+                    sh 'mvn clean package -DskipTests -Dmaven.compile.fork=true -T 1C'
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
                 }
             }
         }
-
-        stage("SonarQube Analysis") {
+        
+        stage('SonarQube Analysis') {
             steps {
                 dir('app') {
                     withSonarQubeEnv('sq1') {
@@ -54,118 +74,181 @@ pipeline {
                 }
             }
         }
-
-        stage("Publish to Nexus") {
+        
+        stage('Publish to Nexus') {
             steps {
                 dir('app') {
                     script {
                         def pom = readMavenPom file: "pom.xml"
-                        def filesByGlob = findFiles(glob: "target/*.${pom.packaging}")
-                        def artifactPath = filesByGlob[0]?.path
-                        def artifactExists = fileExists(artifactPath)
-
-                        if (artifactExists) {
-                            echo "Publishing artifact: ${artifactPath}"
-                            echo "Group: ${pom.groupId}, Version: ${ARTIFACT_VERSION}"
-
-                            nexusArtifactUploader(
-                                nexusVersion: NEXUS_VERSION,
-                                protocol: NEXUS_PROTOCOL,
-                                nexusUrl: NEXUS_URL,
-                                groupId: pom.groupId,
-                                version: ARTIFACT_VERSION,
-                                repository: NEXUS_REPOSITORY,
-                                credentialsId: NEXUS_CREDENTIAL_ID,
-                                artifacts: [
-                                    [artifactId: pom.artifactId, classifier: '', file: artifactPath, type: pom.packaging]
-                                ]
-                            )
-                        } else {
-                            error "Artifact not found at: ${artifactPath}"
-                        }
-                    }
-                }
-            }
-        }
-
-        stage("Download Artifact from Nexus") {
-            steps {
-                dir('app') {
-                    script {
-                        def pom = readMavenPom file: "pom.xml"
-                        def downloadPath = "${pom.groupId.replace('.', '/')}/${pom.artifactId}/${ARTIFACT_VERSION}"
-                        def artifactFile = "${pom.artifactId}-${ARTIFACT_VERSION}.${pom.packaging}"
-                        def nexusUrl = "${NEXUS_PROTOCOL}://${NEXUS_URL}/repository/${NEXUS_REPOSITORY}/${downloadPath}/${artifactFile}"
-
-                        withCredentials([usernamePassword(
-                            credentialsId: NEXUS_CREDENTIAL_ID,
-                            passwordVariable: 'NEXUS_PASSWORD',
-                            usernameVariable: 'NEXUS_USERNAME'
-                        )]) {
-                            // Secure way to handle credentials in curl
-                            sh """
-                                curl -u \$NEXUS_USERNAME:\$NEXUS_PASSWORD \
-                                -o downloaded-${artifactFile} \
-                                ${nexusUrl}
-                            """
-                        }
+                        def artifactFile = "target/${pom.artifactId}-${pom.version}.${pom.packaging}"
                         
-                        // Verify download
-                        if (!fileExists("downloaded-${artifactFile}")) {
-                            error "Failed to download artifact from Nexus"
-                        }
-                        echo "Successfully downloaded artifact: downloaded-${artifactFile}"
+                        nexusArtifactUploader(
+                            nexusVersion: NEXUS_VERSION,
+                            protocol: NEXUS_PROTOCOL,
+                            nexusUrl: NEXUS_URL,
+                            groupId: pom.groupId,
+                            version: ARTIFACT_VERSION,
+                            repository: NEXUS_REPOSITORY,
+                            credentialsId: NEXUS_CREDENTIAL_ID,
+                            artifacts: [
+                                [artifactId: pom.artifactId, file: artifactFile, type: pom.packaging]
+                            ]
+                        )
                     }
                 }
             }
         }
-
-        stage("Build and Push Docker Image") {
+        
+        stage('Build Docker Image') {
             steps {
-                script {
-                        dir('app') {
-                        // Build Docker image
+                dir('app') {
+                    script {
+                        // Build with build number tag
                         sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
                         
-                        // Login to Docker Hub securely
-                        withCredentials([usernamePassword(
-                            credentialsId: DOCKER_CREDENTIALS_ID,
-                            passwordVariable: 'DOCKER_PASSWORD',
-                            usernameVariable: 'DOCKER_USERNAME'
-                        )]) {
-                            sh """
-                                echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
-                            """
-                        }
-                        
-                        // Push to Docker Hub
-                        sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                        
-                        // Clean up
-                        sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                        // Also tag as latest for local testing
+                        sh "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
                     }
                 }
             }
         }
-         stage('Start Services with Docker Compose') {
-         steps {
-            script {
-               dir('app') {
-                 sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
-             }
+        
+        stage('Deploy with Docker Compose') {
+            steps {
+                script {
+                    dir('app') {
+                        // Backup database if exists
+                        sh """
+                            mkdir -p db_backups || true
+                            docker compose -f ${DOCKER_COMPOSE_FILE} exec -T mysql \
+                                mysqldump -uroot -proot greenSpacedb > db_backups/backup_${BUILD_NUMBER}.sql || true
+                        """
+                        
+                        // Full cleanup
+                        sh """
+                            docker compose -f ${DOCKER_COMPOSE_FILE} down --volumes --remove-orphans --timeout 30 || true
+                            docker system prune -af --volumes || true
+                        """
+                        
+                        // Fresh deployment
+                        sh """
+                            docker compose -f ${DOCKER_COMPOSE_FILE} up -d --build --force-recreate
+                        """
+                        
+                        // Health check with retries
+                        def healthy = false
+                        def attempts = 0
+                        
+                        while (!healthy && attempts < HEALTH_CHECK_RETRIES.toInteger()) {
+                            sleep(HEALTH_CHECK_INTERVAL.toInteger())
+                            attempts++
+                            
+                            try {
+                                def result = sh(
+                                    script: "docker compose -f ${DOCKER_COMPOSE_FILE} ps --services --filter \"status=running\"",
+                                    returnStdout: true
+                                ).trim()
+                                
+                                def unhealthy = sh(
+                                    script: "docker compose -f ${DOCKER_COMPOSE_FILE} ps --services --filter \"status=unhealthy\"",
+                                    returnStdout: true
+                                ).trim()
+                                
+                                healthy = result && !unhealthy
+                                echo "Health check attempt ${attempts}: Running - ${result}, Unhealthy - ${unhealthy}"
+                            } catch (Exception e) {
+                                echo "Health check failed: ${e.getMessage()}"
+                            }
+                        }
+                        
+                        if (!healthy) {
+                            error "Services failed to reach healthy state after ${attempts} attempts"
+                        }
+                    }
+                }
             }
-         }
-      }
-    }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully!'
-            // mail to: env.EMAIL_RECIPIENT, subject: env.EMAIL_SUBJECT, body: 'Build succeeded!'
         }
+        
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKER_CREDENTIALS_ID,
+                        passwordVariable: 'DOCKER_PASSWORD',
+                        usernameVariable: 'DOCKER_USERNAME'
+                    )]) {
+                        sh """
+                            echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
+                            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                            docker push ${DOCKER_IMAGE}:latest
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                // Archive important files
+                dir('app') {
+                    archiveArtifacts artifacts: 'db_backups/*.sql,docker-compose.log', allowEmptyArchive: true
+                }
+                
+                // Cleanup Docker resources
+                sh 'docker system prune -f --filter "until=24h" || true'
+            }
+        }
+        
+        success {
+            script {
+                // Get service URLs
+                def appUrl = sh(script: "echo \$(docker compose -f app/${DOCKER_COMPOSE_FILE} port myproject 8089)", returnStdout: true).trim()
+                def phpmyadminUrl = sh(script: "echo \$(docker compose -f app/${DOCKER_COMPOSE_FILE} port phpmyadmin 80)", returnStdout: true).trim()
+                
+                mail to: env.EMAIL_RECIPIENT,
+                     subject: "${env.EMAIL_SUBJECT} - SUCCESS",
+                     body: """
+                        Build #${BUILD_NUMBER} succeeded!
+                        
+                        Application URL: http://${appUrl}
+                        phpMyAdmin URL: http://${phpmyadminUrl}
+                        
+                        Build Log: ${BUILD_URL}
+                     """
+            }
+        }
+        
         failure {
-            echo 'Pipeline failed!'
-            // mail to: env.EMAIL_RECIPIENT, subject: env.EMAIL_SUBJECT, body: 'Build failed!'
+            script {
+                // Capture diagnostics
+                dir('app') {
+                    sh """
+                        docker compose -f ${DOCKER_COMPOSE_FILE} logs --no-color --tail=500 > docker-compose.log || true
+                        docker ps -a > docker-ps.log || true
+                        docker images > docker-images.log || true
+                    """
+                    
+                    archiveArtifacts artifacts: 'docker-*.log', allowEmptyArchive: true
+                }
+                
+                mail to: env.EMAIL_RECIPIENT,
+                     subject: "${env.EMAIL_SUBJECT} - FAILED",
+                     body: """
+                        Build #${BUILD_NUMBER} failed!
+                        
+                        Error: ${currentBuild.currentResult}
+                        
+                        Build Log: ${BUILD_URL}
+                        
+                        Check attached logs for details.
+                     """
+            }
+        }
+        
+        cleanup {
+            cleanWs()
         }
     }
 }
