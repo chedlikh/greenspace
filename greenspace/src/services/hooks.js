@@ -2,7 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 
-const API_BASE_URL = "http://localhost:8089";
+const API_BASE_URL = "/api";
 
 // Fetch authenticated user details
 export const fetchUserDetails = async (token) => {
