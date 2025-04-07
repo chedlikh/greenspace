@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import Dropdown from 'react-bootstrap/Dropdown';
 import { logout, fetchUserDetailsThunk } from '../../features/authSlice'; // Import the async thunk
-import './navbar.css';
+import './Navbar.css';
 
 const Navbar = () => {
   const dispatch = useDispatch();
