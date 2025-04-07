@@ -64,6 +64,22 @@ services:
       - UPLOAD_LIMIT=128M
     ports:
       - "8099:80"
+  # Frontend Service
+  frontend:
+    build:
+      context: ../greenspace
+      dockerfile: Dockerfile.frontend
+    container_name: greenspace-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - mynetwork
 
 volumes:
   mysql_data:
+networks:
+  mynetwork:
+    driver: bridge
+  
