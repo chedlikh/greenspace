@@ -137,15 +137,7 @@
                 }
             }
         }
-         stage('Start Services with Docker Compose') {
-         steps {
-            script {
-               dir('app') {
-                 sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
-             }
-            }
-         }
-      }
+         
        stage('Build Frontend') {
   steps {
     dir('greenspace') {
@@ -155,16 +147,29 @@
   }
 }
 
-stage('Build and Push Frontend Image') {
-  steps {
-    dir('greenspace') {
-      sh "docker build -t ${DOCKER_IMAGE}-frontend:${DOCKER_TAG} -f Dockerfile.frontend ."
-      withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, ...)]) {
-        sh "docker push ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}"
+ stage('Build and Push Frontend Image') {
+            steps {
+                dir('greenspace') {
+                    sh "docker build -t ${DOCKER_IMAGE}-frontend:${DOCKER_TAG} -f Dockerfile.frontend ."
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKER_CREDENTIALS_ID,
+                        passwordVariable: 'DOCKER_PASSWORD',
+                        usernameVariable: 'DOCKER_USERNAME'
+                    )]) {
+                        sh "docker push ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}"
+                    }
+                }
+            }
+        }
+stage('Start Services with Docker Compose') {
+         steps {
+            script {
+               dir('app') {
+                 sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
+             }
+            }
+         }
       }
-    }
-  }
-}
     }
 
     post {
