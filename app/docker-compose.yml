@@ -70,12 +70,7 @@ services:
       - "3000:80"
     depends_on:
       - app
-    networks:
-      - mynetwork
 
 volumes:
   mysql_data:
-networks:
-  mynetwork:
-    driver: bridge
   
