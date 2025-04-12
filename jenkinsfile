@@ -1,5 +1,5 @@
- pipeline {
-   agent any
+pipeline {
+    agent any
 
     tools {
         maven 'M2_HOME'
@@ -56,8 +56,6 @@
 
                         if (artifactExists) {
                             echo "Publishing artifact: ${artifactPath}"
-                            echo "Group: ${pom.groupId}, Version: ${ARTIFACT_VERSION}"
-
                             nexusArtifactUploader(
                                 nexusVersion: NEXUS_VERSION,
                                 protocol: NEXUS_PROTOCOL,
@@ -78,7 +76,7 @@
             }
         }
 
-        stage("Download Artifact from Nexus") {
+        stage("Download Artifact") {
             steps {
                 dir('app') {
                     script {
@@ -92,84 +90,89 @@
                             passwordVariable: 'NEXUS_PASSWORD',
                             usernameVariable: 'NEXUS_USERNAME'
                         )]) {
-                            // Secure way to handle credentials in curl
                             sh """
                                 curl -u \$NEXUS_USERNAME:\$NEXUS_PASSWORD \
-                                -o downloaded-${artifactFile} \
+                                -o target/app.jar \
                                 ${nexusUrl}
                             """
                         }
-                        
-                        // Verify download
-                        if (!fileExists("downloaded-${artifactFile}")) {
-                            error "Failed to download artifact from Nexus"
-                        }
-                        echo "Successfully downloaded artifact: downloaded-${artifactFile}"
                     }
                 }
             }
         }
 
-        stage("Build and Push Docker Image") {
+        stage("Build Backend Image") {
             steps {
-                script {
-                        dir('app') {
-                        // Build Docker image
-                        sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
-                        
-                        // Login to Docker Hub securely
-                        withCredentials([usernamePassword(
-                            credentialsId: DOCKER_CREDENTIALS_ID,
-                            passwordVariable: 'DOCKER_PASSWORD',
-                            usernameVariable: 'DOCKER_USERNAME'
-                        )]) {
-                            sh """
-                                echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
-                            """
-                        }
-                        
-                        // Push to Docker Hub
-                        sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                        
-                        // Clean up
-                        sh "docker rmi ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                    }
-                }
-            }
-        }
-         
-       stage('Build Frontend') {
-  steps {
-    dir('greenspace') {
-      sh 'npm ci'
-      sh 'npm run build'
-    }
-  }
-}
-
- stage('Build and Push Frontend Image') {
-            steps {
-                dir('greenspace') {
-                    sh "docker build -t ${DOCKER_IMAGE}-frontend:${DOCKER_TAG} -f Dockerfile.frontend ."
+                dir('app') {
                     withCredentials([usernamePassword(
                         credentialsId: DOCKER_CREDENTIALS_ID,
                         passwordVariable: 'DOCKER_PASSWORD',
                         usernameVariable: 'DOCKER_USERNAME'
                     )]) {
-                        sh "docker push ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}"
+                        sh """
+                            echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
+                            docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        """
                     }
                 }
             }
         }
-stage('Start Services with Docker Compose') {
-         steps {
-            script {
-               dir('app') {
-                 sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
-             }
+
+        stage('Build Frontend') {
+            steps {
+                dir('greenspace') {
+                    sh 'npm ci'
+                    sh 'npm run build'
+                }
             }
-         }
-      }
+        }
+
+        stage("Build Frontend Image") {
+            steps {
+                dir('greenspace') {
+                    withCredentials([usernamePassword(
+                        credentialsId: DOCKER_CREDENTIALS_ID,
+                        passwordVariable: 'DOCKER_PASSWORD',
+                        usernameVariable: 'DOCKER_USERNAME'
+                    )]) {
+                        sh """
+                            docker build -t ${DOCKER_IMAGE}-frontend:${DOCKER_TAG} -f Dockerfile.frontend .
+                            docker push ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Cleanup Old Deployment') {
+            steps {
+                script {
+                    // Stop and remove containers if they exist
+                    sh "docker compose -f ${DOCKER_COMPOSE_FILE} down --rmi local --remove-orphans || true"
+                    
+                    // Clean up unused images
+                    sh "docker image prune -af"
+                    
+                    // Remove dangling images
+                    sh "docker rmi \$(docker images -f 'dangling=true' -q) || true"
+                }
+            }
+        }
+
+        stage('Deploy with Docker Compose') {
+            steps {
+                script {
+                    dir('app') {
+                        // Substitute environment variables in compose file
+                        sh """
+                            envsubst < ${DOCKER_COMPOSE_FILE} > docker-compose-processed.yml
+                            docker compose -f docker-compose-processed.yml up -d --build --force-recreate
+                        """
+                    }
+                }
+            }
+        }
     }
 
     post {
