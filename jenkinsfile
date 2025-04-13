@@ -30,7 +30,6 @@ pipeline {
                     sh 'docker compose version'
                     sh 'docker ps'
                     git branch: 'main', url: 'https://github.com/chedlikh/greenspace.git'
-                    sh 'curl -I http://127.0.0.1:8081'
                     sh 'echo "Hello, World!"'
                 }
             }
