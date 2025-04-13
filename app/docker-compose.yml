@@ -24,27 +24,18 @@ services:
       retries: 10
 
   app:
-    image: ${DOCKER_IMAGE}:${DOCKER_TAG}  # Added image reference for Jenkins
+    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     container_name: greenSpace
     depends_on:
       mysqldb:
         condition: service_healthy
-    build:  # Kept build for local development
-      context: .
-      dockerfile: Dockerfile  
     restart: unless-stopped
     ports:
       - "8089:8089"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://192.168.0.187:3000,http://192.168.1.107:3000
-      - SPRING_APPLICATION_JSON={
-          "spring.datasource.url": "jdbc:mysql://mysqldb:3306/greenSpacedb?useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=true&serverTimezone=UTC",
-          "spring.datasource.username": "root",
-          "spring.datasource.password": "root",
-          "spring.jpa.properties.hibernate.dialect": "org.hibernate.dialect.MySQLDialect",
-          "spring.jpa.hibernate.ddl-auto": "update"
-        }
+      - SPRING_APPLICATION_JSON={"spring.datasource.url":"jdbc:mysql://mysqldb:3306/greenSpacedb?useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=true&serverTimezone=UTC","spring.datasource.username":"root","spring.datasource.password":"root","spring.jpa.properties.hibernate.dialect":"org.hibernate.dialect.MySQLDialect","spring.jpa.hibernate.ddl-auto":"update"}
     volumes:
       - ./uploads:/app/uploads
 
@@ -64,17 +55,10 @@ services:
       - "8099:80"
 
   frontend:
-    image: ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}  # Added image reference for Jenkins
-    build:
-      context: ../greenspace
-      dockerfile: Dockerfile.frontend
-      args:
-        - API_BASE_URL=http://backend:8089  # Docker internal networking
+    image: ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}
     container_name: greenspace-frontend
     ports:
       - "3000:80"
-    environment:
-      - REACT_APP_API_BASE_URL=http://localhost:8089  # For local development
     depends_on:
       - app
 
