@@ -9,7 +9,7 @@ pipeline {
         // Nexus variables
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "192.168.0.187:8081"
+        NEXUS_URL = "192.168.0.187:8081"  // This can remain fixed as it's your internal Nexus
         NEXUS_REPOSITORY = "maven-releases"
         NEXUS_CREDENTIAL_ID = "NEXUS_CRED"
         ARTIFACT_VERSION = "${BUILD_NUMBER}"
@@ -123,6 +123,7 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 dir('greenspace') {
+                    // Use container name instead of IP for API_BASE_URL
                     sh 'npm ci'
                     sh 'npm run build'
                 }
