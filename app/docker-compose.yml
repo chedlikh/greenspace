@@ -34,7 +34,7 @@ services:
       - "8089:8089"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://192.168.0.187:3000,http://192.168.1.107:3000
+      - CORS_ALLOWED_ORIGINS=http://frontend:3000,http://localhost:3000
       - SPRING_APPLICATION_JSON={"spring.datasource.url":"jdbc:mysql://mysqldb:3306/greenSpacedb?useSSL=false&allowPublicKeyRetrieval=true&useLegacyDatetimeCode=true&serverTimezone=UTC","spring.datasource.username":"root","spring.datasource.password":"root","spring.jpa.properties.hibernate.dialect":"org.hibernate.dialect.MySQLDialect","spring.jpa.hibernate.ddl-auto":"update"}
     volumes:
       - ./uploads:/app/uploads
@@ -58,9 +58,11 @@ services:
     image: ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}
     container_name: greenspace-frontend
     ports:
-      - "3000:80"
+      - "3000:3000"
     depends_on:
       - app
+    environment:
+      - REACT_APP_API_BASE_URL=http://app:8089
 
 volumes:
   mysql_data:
