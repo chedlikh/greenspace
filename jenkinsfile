@@ -9,7 +9,7 @@ pipeline {
         // Nexus variables
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "127.0.0.1:8081" 
+        NEXUS_URL = "192.168.1.107:8081" 
         NEXUS_REPOSITORY = "maven-releases"
         NEXUS_CREDENTIAL_ID = "NEXUS_CRED"
         ARTIFACT_VERSION = "${BUILD_NUMBER}"
