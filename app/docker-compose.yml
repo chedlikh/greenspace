@@ -24,8 +24,17 @@ services:
       retries: 10
 
   app:
-    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
+    image: ${DOCKER_IMAGE}:${DOCKER_TAG}  # Added image reference for Jenkins
     container_name: greenSpace
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+    build:  # Kept build for local development
+      context: .
+      dockerfile: Dockerfile  
+    restart: unless-stopped
+    ports:
+      - "8089:8089"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://192.168.0.187:3000,http://192.168.1.107:3000
@@ -36,12 +45,6 @@ services:
           "spring.jpa.properties.hibernate.dialect": "org.hibernate.dialect.MySQLDialect",
           "spring.jpa.hibernate.ddl-auto": "update"
         }
-    depends_on:
-      mysqldb:
-        condition: service_healthy
-    restart: unless-stopped
-    ports:
-      - "8089:8089"
     volumes:
       - ./uploads:/app/uploads
 
@@ -61,16 +64,19 @@ services:
       - "8099:80"
 
   frontend:
-    image: ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}
+    image: ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}  # Added image reference for Jenkins
     build:
       context: ../greenspace
       dockerfile: Dockerfile.frontend
       args:
-        - API_BASE_URL=http://backend:8089
+        - API_BASE_URL=http://backend:8089  # Docker internal networking
+    container_name: greenspace-frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     environment:
-      - REACT_APP_API_BASE_URL=http://localhost:8089
+      - REACT_APP_API_BASE_URL=http://localhost:8089  # For local development
+    depends_on:
+      - app
 
 volumes:
   mysql_data:
