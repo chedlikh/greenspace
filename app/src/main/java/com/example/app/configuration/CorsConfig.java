@@ -19,6 +19,13 @@ public class CorsConfig {
                                         "http://192.168.0.187:3000",
                                         "http://frontend",
                                         "http://localhost", 
+                                        "http://localhost:3000",
+                                       
+                                        "http://192.168.1.107:8089", 
+                                        "http://192.168.1.107",
+                                        "http://192.168.1.107:3000",
+                                        "http://frontend",
+                                        "http://localhost", 
                                         "http://localhost:3000")
                         .allowedMethods("GET", "POST", "PUT", "DELETE")
                         .allowedHeaders("*")
