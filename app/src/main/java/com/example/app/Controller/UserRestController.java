@@ -31,7 +31,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://192.168.0.187:3000", allowCredentials = "true")
 @Controller
 public class UserRestController {
     @Autowired
