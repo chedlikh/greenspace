@@ -9,7 +9,7 @@ pipeline {
         // Nexus variables
         NEXUS_VERSION = "nexus3"
         NEXUS_PROTOCOL = "http"
-        NEXUS_URL = "localhost:8081" 
+        NEXUS_URL = "127.0.0.1:8081" 
         NEXUS_REPOSITORY = "maven-releases"
         NEXUS_CREDENTIAL_ID = "NEXUS_CRED"
         ARTIFACT_VERSION = "${BUILD_NUMBER}"
@@ -30,7 +30,7 @@ pipeline {
                     sh 'docker compose version'
                     sh 'docker ps'
                     git branch: 'main', url: 'https://github.com/chedlikh/greenspace.git'
-                    sh 'curl http://localhost:8081'
+                    sh 'curl http://127.0.0.1:8081'
                     sh 'echo "Hello, World!"'
                 }
             }
