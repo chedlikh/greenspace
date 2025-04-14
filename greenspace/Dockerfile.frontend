@@ -4,8 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# Use container name instead of IP for API_BASE_URL
-ARG API_BASE_URL=http://app:8089
+# Use the static IP for API_BASE_URL
+ARG API_BASE_URL=http://192.168.0.187:8089
 ENV REACT_APP_API_BASE_URL=$API_BASE_URL
 RUN npm run build
 
