@@ -26,6 +26,10 @@ import PosteDetail from './components/Admin/Poste/PosteDetail';
 import ListSondage from './components/Admin/Sondage/ListSondage';
 import SondageDetail from './components/Admin/Sondage/SondageDetail';
 import CreateSondage from './components/Admin/Sondage/CreateSondage';
+import { StoryDetails } from './components/Admin/Story/StoryDetails';
+import { CreateStory } from './components/Admin/Story/CreateStory';
+import StoryList from './components/Admin/Story/StoryAlbum';
+import StoryAlbum from './components/Admin/Story/StoryAlbum';
 
 
 
@@ -102,6 +106,10 @@ function AppContent() {
           <Route path="/sondages" element={token ? <ListSondage /> : <Navigate to="/login" replace />} />
           <Route path="/sondages/:id" element={token ? <SondageDetail /> : <Navigate to="/login" replace />} />
           <Route path="/sondages/create" element={token ? <CreateSondage /> : <Navigate to="/login" replace />} />
+          <Route path="/stories" element={token ? <StoryAlbum /> : <Navigate to="/login" replace />} />
+          <Route path="/story/:id" element={token ? <StoryDetails /> : <Navigate to="/login" replace />} />
+          <Route path="/create-story" element={token ? <CreateStory /> : <Navigate to="/login" replace />} />
+          
           {/* Page 404 */}
           <Route path="*" element={<div>404 Not Found</div>} />
         </Routes>

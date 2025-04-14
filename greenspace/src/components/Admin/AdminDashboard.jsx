@@ -97,6 +97,17 @@ const AdminDashboard = () => {
       ],
       linkTo: "/sondages",
       buttonText: "List Sondages"
+    },
+    {
+      icon: BarChart,
+      title: "Stories",
+      stats: [
+        { value: 50, label: "Total Sondages" },
+        { value: 5, label: "Finished" },
+        { value: 3, label: "Not Started" }
+      ],
+      linkTo: "/stories",
+      buttonText: "List Stories"
     }
   ];
 

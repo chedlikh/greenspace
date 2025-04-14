@@ -12,10 +12,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Entity
@@ -55,6 +52,16 @@ public class User implements UserDetails {
     private List<Token> tokens;
     @ManyToOne
     Site site;
+    // Add this to your existing User class
+    @Getter
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<Story> stories = new ArrayList<>();
+
+
+    public void setStories(List<Story> stories) {
+        this.stories = stories;
+    }
 
     public Site getSite() {
         return site;
@@ -267,4 +274,7 @@ public class User implements UserDetails {
         return UserDetails.super.isEnabled();
     }
 
+    public List<Story> getStories() {
+        return stories;
+    }
 }
