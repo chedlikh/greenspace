@@ -121,33 +121,42 @@ pipeline {
             }
         }
 
-        stage('Build Frontend') {
-            steps {
-                dir('greenspace') {
-                    // Use container name instead of IP for API_BASE_URL
-                    sh 'npm ci'
-                    sh 'npm run build'
-                }
+       stage('Build Frontend') {
+    steps {
+        dir('greenspace') {
+            // Clean previous installations and cache
+            sh 'rm -rf node_modules package-lock.json .npmrc'
+            
+            // Install dependencies with force and legacy peer deps
+            sh 'npm install --force --legacy-peer-deps'
+            
+            // Run build with increased memory
+            sh 'NODE_OPTIONS=--max-old-space-size=4096 npm run build'
+        }
+    }
+}
+
+stage("Build Frontend Image") {
+    steps {
+        dir('greenspace') {
+            withCredentials([usernamePassword(
+                credentialsId: DOCKER_CREDENTIALS_ID,
+                passwordVariable: 'DOCKER_PASSWORD',
+                usernameVariable: 'DOCKER_USERNAME'
+            )]) {
+                // Build with the static IP address
+                sh """
+                    docker build \
+                        --build-arg API_BASE_URL=http://192.168.0.187:8089 \
+                        -t ${DOCKER_IMAGE}-frontend:${DOCKER_TAG} \
+                        -f Dockerfile.frontend .
+                        
+                    docker push ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}
+                """
             }
         }
-
-        stage("Build Frontend Image") {
-            steps {
-                dir('greenspace') {
-                    withCredentials([usernamePassword(
-                        credentialsId: DOCKER_CREDENTIALS_ID,
-                        passwordVariable: 'DOCKER_PASSWORD',
-                        usernameVariable: 'DOCKER_USERNAME'
-                    )]) {
-                        sh """
-                            docker build -t ${DOCKER_IMAGE}-frontend:${DOCKER_TAG} -f Dockerfile.frontend .
-                            docker push ${DOCKER_IMAGE}-frontend:${DOCKER_TAG}
-                        """
-                    }
-                }
-            }
-        }
-
+    }
+}
         stage('Cleanup Old Deployment') {
             steps {
                 script {
