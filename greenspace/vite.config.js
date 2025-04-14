@@ -2,37 +2,46 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      babel: {
+        plugins: ['babel-plugin-macros']
+      }
+    }),
     tailwindcss()
   ],
   optimizeDeps: {
     include: [
-      'bootstrap', 
+      'bootstrap',
       '@popperjs/core',
       'react-icons/fi',
       'react-icons/ai',
       'react-icons/bs',
-      // Add any other react-icons subsets you're using
-    ]
+      'react-icons',
+      'date-fns'
+    ],
+    exclude: []
   },
   build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+      include: [/node_modules/],
+      exclude: []
+    },
     rollupOptions: {
-      external: [
-        // No need to externalize react-icons since we're including them in optimizeDeps
-      ],
       output: {
         manualChunks: {
-          // Optional: Create separate chunks for better caching
-          react: ['react', 'react-dom'],
-          icons: ['react-icons']
+          react: ['react', 'react-dom', 'react-redux'],
+          icons: ['react-icons'],
+          datefns: ['date-fns']
         }
       }
-    },
-    commonjsOptions: {
-      include: [/node_modules/]
+    }
+  },
+  resolve: {
+    alias: {
+      // Add any necessary aliases here
     }
   }
 })
