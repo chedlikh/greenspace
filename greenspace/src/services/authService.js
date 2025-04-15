@@ -1,5 +1,5 @@
 export const login = async (credentials) => {
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://192.168.0.187:8089";
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://greenspace.ddns.net:8089";
   const response = await fetch(`${API_BASE_URL}/login`, {
     method: 'POST',
     headers: {
