@@ -147,7 +147,7 @@ const DetailsUser = () => {
             <div className="flex flex-col items-center">
               <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden mb-4">
                 <img
-                  src={user.photoProfile ? `http://localhost:8089/images/${user.photoProfile}` : "images/default-user.png"}
+                  src={user.photoProfile ? `http://192.168.0.187:8089/images/${user.photoProfile}` : "images/default-user.png"}
                   alt="user"
                   className="w-full h-full object-cover"
                 />

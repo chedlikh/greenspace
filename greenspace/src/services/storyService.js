@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 
-const API_BASE_URL = 'http://localhost:8089/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://192.168.0.187:8089";
 
 // Fetch all stories
 export const fetchStories = async (token) => {
   if (!token) throw new Error("No token provided");
 
-  const response = await fetch(`${API_BASE_URL}/stories`, {
+  const response = await fetch(`${API_BASE_URL}/api/stories`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -24,7 +24,7 @@ export const fetchStories = async (token) => {
 export const fetchStoryById = async (id, token) => {
   if (!token) throw new Error("No token provided");
 
-  const response = await fetch(`${API_BASE_URL}/stories/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/api/stories/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -41,7 +41,7 @@ export const fetchStoryById = async (id, token) => {
 export const fetchActiveStoriesByUser = async (username, token) => {
   if (!token) throw new Error("No token provided");
 
-  const response = await fetch(`${API_BASE_URL}/stories/user/${username}`, {
+  const response = await fetch(`${API_BASE_URL}/api/stories/user/${username}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -65,7 +65,7 @@ export const createStory = async ({ storyData, token }) => {
   formData.append('caption', storyData.caption || '');
   formData.append('mediaType', storyData.mediaType || 'IMAGE');
 
-  const response = await fetch(`${API_BASE_URL}/stories`, {
+  const response = await fetch(`${API_BASE_URL}/api/stories`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -94,7 +94,7 @@ export const updateStory = async ({ id, storyData, token }) => {
     formData.append('caption', storyData.caption);
   }
 
-  const response = await fetch(`${API_BASE_URL}/stories/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/api/stories/${id}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -115,7 +115,7 @@ export const updateStory = async ({ id, storyData, token }) => {
 export const deleteStory = async ({ id, token }) => {
   if (!token) throw new Error("No token provided");
 
-  const response = await fetch(`${API_BASE_URL}/stories/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/api/stories/${id}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -134,7 +134,7 @@ export const deleteStory = async ({ id, token }) => {
 // Media URL helpers
 export const getStoryMediaUrl = (filename, token) => {
   return {
-    url: `${API_BASE_URL}/stories/media/${filename}`,
+    url: `${API_BASE_URL}/api/stories/media/${filename}`,
     token: token
   };
 };
