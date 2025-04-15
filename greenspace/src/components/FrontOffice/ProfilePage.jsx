@@ -90,7 +90,7 @@ const ProfilePage = () => {
   }
 
   // Base URL for images
-  const imageBaseUrl = 'http://localhost:8089/images/';
+  const imageBaseUrl = 'http://192.168.0.187:8089/images/';
 
   return (
     <div className="main-content bg-gray-50 min-h-screen">
