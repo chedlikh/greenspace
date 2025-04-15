@@ -2,6 +2,7 @@ package com.example.app.Service;
 
 import com.example.app.Entities.Gservice;
 import com.example.app.Entities.Poste;
+import com.example.app.Entities.User;
 
 import java.util.List;
 import java.util.Set;
@@ -15,4 +16,7 @@ public interface IPosteService {
     Poste assignServiceToPoste(Long posteId, Long serviceId);
     Poste unassignServiceFromPoste(Long posteId, Long serviceId);
     Set<Gservice> getServicesByPosteId(Long posteId);
+    Poste assignUsersToPoste(Long posteId, List<String> usernames);
+    Poste unassignUsersFromposte(Long posteId, List<String> usernames);
+    List<User> getUsersByPosteId(Long posteId);
 }

@@ -176,38 +176,21 @@ const MyInfo = () => {
 
                 <div className="row">
                   <div className="col-lg-12 mb-3">
-                    <label className="mont-font fw-600 font-xsss">Site Details</label>
+                    <label className="mont-font fw-600 font-xsss">Poste Details</label>
                     <div
                       className="p-3 rounded-3"
                       style={{ backgroundColor: "#f0f8ff", border: "1px solid #ccc" }}
                     >
                       <div className="mb-2">
-                        <strong>Nom du site :</strong>
+                        <strong>Nom du poste :</strong>
                         <input
                           type="text"
                           className="form-control mt-1"
-                          value={combinedUser.site?.nom || "N/A"}
+                          value={combinedUser.poste?.titre || "N/A"}
                           readOnly
                         />
                       </div>
-                      <div className="mb-2">
-                        <strong>Adresse du site :</strong>
-                        <input
-                          type="text"
-                          className="form-control mt-1"
-                          value={combinedUser.site?.adresse || "N/A"}
-                          readOnly
-                        />
-                      </div>
-                      <div className="mb-2">
-                        <strong>Type du site :</strong>
-                        <input
-                          type="text"
-                          className="form-control mt-1"
-                          value={combinedUser.site?.type || "N/A"}
-                          readOnly
-                        />
-                      </div>
+                     
                     </div>
                   </div>
                 </div>

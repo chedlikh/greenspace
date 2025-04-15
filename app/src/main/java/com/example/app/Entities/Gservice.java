@@ -1,6 +1,7 @@
 package com.example.app.Entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,20 +27,21 @@ public class Gservice {
     @Column(nullable = false)
     private String description;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(
             name = "gservice_site",
             joinColumns = @JoinColumn(name = "gservice_id"),
             inverseJoinColumns = @JoinColumn(name = "site_id")
     )
-    @JsonIgnore
+    @JsonIgnoreProperties({"gservices", "sondages"})
     private Set<Site> sites = new HashSet<>();
 
-    @ManyToMany(mappedBy = "gservices", fetch = FetchType.LAZY)
+    @ManyToMany(mappedBy = "gservices", fetch = FetchType.EAGER)
+    @JsonIgnoreProperties("gservices")
     private Set<Poste> postes = new HashSet<>();
 
-    @ManyToMany(mappedBy = "gservices", fetch = FetchType.LAZY)
-    @JsonIgnore
+    @ManyToMany(mappedBy = "gservices", fetch = FetchType.EAGER)
+    @JsonIgnoreProperties("gservices")
     private Set<Sondage> sondages = new HashSet<>();
 
     public Set<Sondage> getSondages() {

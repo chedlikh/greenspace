@@ -52,43 +52,6 @@ public class SiteService implements ISiteService{
         siteRepo.deleteById(id);
     }
 
-    @Override
-    public Site assignUsersToSite(Long siteId, List<String> usernames) {
-        // Fetch the site by siteId
-        Site site = siteRepo.findById(siteId)
-                .orElseThrow(() -> new RuntimeException("Site not found"));
 
-        // Fetch users by usernames and add them to the site
-        for (String username : usernames) {
-            User user = userRepo.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + username));
-            site.getUsers().add(user); // Add user to the site's user set
-            user.setSite(site); // Set the site for the user (bidirectional relationship)
-        }
-
-        // Save the updated site
-        return siteRepo.save(site);
-    }
-    @Override
-    public Site unassignUsersFromSite(Long siteId, List<String> usernames) {
-        // Fetch the site by siteId
-        Site site = siteRepo.findById(siteId)
-                .orElseThrow(() -> new RuntimeException("Site not found"));
-
-        // Fetch users by usernames and remove them from the site
-        for (String username : usernames) {
-            User user = userRepo.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + username));
-
-            // Remove the user from the site's user set
-            site.getUsers().remove(user);
-
-            // Set the user's site to null (optional, depending on your bidirectional relationship)
-            user.setSite(null);
-        }
-
-        // Save the updated site
-        return siteRepo.save(site);
-    }
 
 }

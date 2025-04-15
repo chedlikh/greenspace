@@ -492,11 +492,11 @@ export const useDeleteSite = (id) => {
     },
   });
 };
-// Assign users to site
-export const assignUsersToSite = async ({ siteId, usernames, token }) => {
+// Assign users to poste
+export const assignUsersToPoste = async ({ posteId, usernames, token }) => {
   if (!token) throw new Error("No token provided");
 
-  const response = await fetch(`${API_BASE_URL}/Site/${siteId}/assign-users`, {
+  const response = await fetch(`${API_BASE_URL}/api/postes/${posteId}/assign-users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -507,35 +507,35 @@ export const assignUsersToSite = async ({ siteId, usernames, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json();
-    console.error("Failed to assign users to site:", errorData);
-    throw new Error(errorData.message || "Failed to assign users to site");
+    console.error("Failed to assign users to poste:", errorData);
+    throw new Error(errorData.message || "Failed to assign users to poste");
   }
 
   return response.json();
 };
 
-// Custom hook to assign users to site
-export const useAssignUsersToSite = (siteId) => {
+// Custom hook to assign users to poste
+export const useAssignUsersToPoste = (posteId) => {
   const token = useSelector((state) => state.auth.token);
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (usernames) => assignUsersToSite({ siteId, usernames, token }),
+    mutationFn: (usernames) => assignUsersToPoste({ posteId, usernames, token }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["site", siteId]); // Invalidate and refetch site details
-      alert("Users assigned to site successfully!");
+      queryClient.invalidateQueries(["poste", posteId]); // Invalidate and refetch site details
+      alert("Users assigned to poste successfully!");
     },
     onError: (error) => {
-      console.error("Error assigning users to site:", error);
-      alert("Failed to assign users to site: " + error.message);
+      console.error("Error assigning users to poste:", error);
+      alert("Failed to assign users to poste: " + error.message);
     },
   });
 };
-// Unassign users from site
-export const unassignUsersFromSite = async ({ siteId, usernames, token }) => {
+// Unassign users from poste
+export const unassignUsersFromPoste = async ({ posteId, usernames, token }) => {
   if (!token) throw new Error("No token provided");
 
-  const response = await fetch(`${API_BASE_URL}/Site/${siteId}/unassign-users`, {
+  const response = await fetch(`${API_BASE_URL}/api/postes/${posteId}/unassign-users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -546,28 +546,46 @@ export const unassignUsersFromSite = async ({ siteId, usernames, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json();
-    console.error("Failed to unassign users from site:", errorData);
-    throw new Error(errorData.message || "Failed to unassign users from site");
+    console.error("Failed to unassign users from poste:", errorData);
+    throw new Error(errorData.message || "Failed to unassign users from poste");
   }
 
   return response.json();
 };
 
-// Custom hook to unassign users from site
-export const useUnassignUsersFromSite = (siteId) => {
+// Custom hook to unassign users from poste
+export const useUnassignUsersFromPoste = (posteId) => {
   const token = useSelector((state) => state.auth.token);
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (usernames) => unassignUsersFromSite({ siteId, usernames, token }),
+    mutationFn: (usernames) => unassignUsersFromPoste({ posteId, usernames, token }),
     onSuccess: () => {
-      queryClient.invalidateQueries(["site", siteId]); // Invalidate and refetch site details
-      alert("Users unassigned from site successfully!");
+      queryClient.invalidateQueries(["poste", posteId]); // Invalidate and refetch site details
+      alert("Users unassigned from poste successfully!");
     },
     onError: (error) => {
-      console.error("Error unassigning users from site:", error);
-      alert("Failed to unassign users from site: " + error.message);
+      console.error("Error unassigning users from poste:", error);
+      alert("Failed to unassign users from poste: " + error.message);
     },
+  });
+};
+
+export const useUsersByPosteId = (posteId) => {
+  const token = useSelector((state) => state.auth.token);
+  
+  return useQuery({
+    queryKey: ['posteUsers', posteId],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/api/postes/${posteId}/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch poste users');
+      return response.json();
+    },
+    enabled: !!posteId,
   });
 };
 // Fetch all societes

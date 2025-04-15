@@ -2,8 +2,11 @@ package com.example.app.Service;
 
 import com.example.app.Entities.Gservice;
 import com.example.app.Entities.Poste;
+import com.example.app.Entities.Site;
+import com.example.app.Entities.User;
 import com.example.app.Repository.GserviceRepository;
 import com.example.app.Repository.PosteRepository;
+import com.example.app.Repository.UserRepo;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +20,13 @@ public class PosteServiceImpl implements IPosteService{
 
     private final PosteRepository posteRepository;
     private final GserviceRepository gserviceRepository;
+    private final UserRepo userRepo;
 
     @Autowired
-    public PosteServiceImpl(PosteRepository posteRepository, GserviceRepository gserviceRepository) {
+    public PosteServiceImpl(PosteRepository posteRepository, GserviceRepository gserviceRepository, UserRepo userRepo) {
         this.posteRepository = posteRepository;
         this.gserviceRepository = gserviceRepository;
+        this.userRepo = userRepo;
     }
 
     @Override
@@ -79,5 +84,47 @@ public class PosteServiceImpl implements IPosteService{
     public Set<Gservice> getServicesByPosteId(Long posteId) {
         Poste poste = getPosteById(posteId);
         return poste.getGservices();
+    }
+    @Override
+    public Poste assignUsersToPoste(Long posteId, List<String> usernames) {
+        // Fetch the site by siteId
+        Poste poste = posteRepository.findById(posteId)
+                .orElseThrow(() -> new RuntimeException("Site not found"));
+
+        // Fetch users by usernames and add them to the site
+        for (String username : usernames) {
+            User user = userRepo.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + username));
+            poste.getUsers().add(user); // Add user to the site's user set
+            user.setPoste(poste); // Set the site for the user (bidirectional relationship)
+        }
+
+
+        return posteRepository.save(poste);
+    }
+    @Override
+    public Poste unassignUsersFromposte(Long posteId, List<String> usernames) {
+
+        Poste poste = posteRepository.findById(posteId)
+                .orElseThrow(() -> new RuntimeException("Site not found"));
+
+        // Fetch users by usernames and remove them from the site
+        for (String username : usernames) {
+            User user = userRepo.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+            // Remove the user from the site's user set
+            poste.getUsers().remove(user);
+
+            // Set the user's site to null (optional, depending on your bidirectional relationship)
+            user.setPoste(null);
+        }
+
+        // Save the updated site
+        return posteRepository.save(poste);
+    }
+    @Override
+    public List<User> getUsersByPosteId(Long posteId) {
+        return userRepo.findByPosteId(posteId);
     }
 }

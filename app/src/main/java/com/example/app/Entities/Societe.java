@@ -30,7 +30,7 @@ public class Societe {
     @Column(nullable = false)
     private String adresse;
 
-    @OneToMany(mappedBy = "societe", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "societe", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnore
     private Set<Site> sites = new HashSet<>();
 

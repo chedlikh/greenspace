@@ -2,6 +2,7 @@ package com.example.app.Entities;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -50,9 +51,11 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user")
     @JsonIgnore
     private List<Token> tokens;
-    @ManyToOne
-    Site site;
-    // Add this to your existing User class
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "poste_id")
+    @JsonIgnoreProperties("users")
+    private Poste poste;
     @Getter
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
@@ -63,13 +66,9 @@ public class User implements UserDetails {
         this.stories = stories;
     }
 
-    public Site getSite() {
-        return site;
-    }
 
-    public void setSite(Site site) {
-        this.site = site;
-    }
+
+
 
     public User(String email, String username, String password, String photoProfile, String photoCover, String firstname, String lastName, String gender, String adress, String country, Long phone, Boolean isValide, LocalDate birthday, LocalDate activeDate, LocalDate createDate, Boolean isConnect, Set<Role> roles, List<Token> tokens) {
         this.email = email;
@@ -272,6 +271,13 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return UserDetails.super.isEnabled();
+    }
+    public Poste getPoste() {
+        return poste;
+    }
+
+    public void setPoste(Poste poste) {
+        this.poste = poste;
     }
 
     public List<Story> getStories() {

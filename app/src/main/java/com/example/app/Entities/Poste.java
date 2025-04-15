@@ -1,6 +1,7 @@
 package com.example.app.Entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,14 +24,18 @@ public class Poste {
     @Column(nullable = false)
     private String titre;
 
-    @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinTable(
             name = "poste_gservice",
             joinColumns = @JoinColumn(name = "poste_id"),
             inverseJoinColumns = @JoinColumn(name = "gservice_id")
     )
-    @JsonIgnore
+
+    @JsonIgnoreProperties({"postes", "sondages"})
     private Set<Gservice> gservices = new HashSet<>();
+    @OneToMany(mappedBy = "poste", fetch = FetchType.EAGER)
+    @JsonIgnore
+    private Set<User> users = new HashSet<>();
 
     public void assignService(Gservice gservice) {
         this.gservices.add(gservice);
@@ -64,5 +69,13 @@ public class Poste {
 
     public void setGservices(Set<Gservice> gservices) {
         this.gservices = gservices;
+    }
+
+    public Set<User> getUsers() {
+        return users;
+    }
+
+    public void setUsers(Set<User> users) {
+        this.users = users;
     }
 }

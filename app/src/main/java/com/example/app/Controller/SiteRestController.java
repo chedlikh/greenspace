@@ -57,20 +57,5 @@ public class SiteRestController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @PostMapping("/{siteId}/assign-users")
-    public ResponseEntity<Site> assignUsersToSite(
-            @PathVariable Long siteId,
-            @RequestBody Map<String, List<String>> request) {
-        List<String> usernames = request.get("usernames");
-        Site updatedSite = siteService.assignUsersToSite(siteId, usernames);
-        return new ResponseEntity<>(updatedSite, HttpStatus.OK);
-    }
-    @PostMapping("/{siteId}/unassign-users")
-    public ResponseEntity<Site> unassignUsersFromSite(
-            @PathVariable Long siteId,
-            @RequestBody Map<String, List<String>> request) {
-        List<String> usernames = request.get("usernames");
-        Site updatedSite = siteService.unassignUsersFromSite(siteId, usernames);
-        return new ResponseEntity<>(updatedSite, HttpStatus.OK);
-    }
+
 }

@@ -30,6 +30,7 @@ import { StoryDetails } from './components/Admin/Story/StoryDetails';
 import { CreateStory } from './components/Admin/Story/CreateStory';
 import StoryList from './components/Admin/Story/StoryAlbum';
 import StoryAlbum from './components/Admin/Story/StoryAlbum';
+import ProfilePage from './components/FrontOffice/ProfilePage';
 
 
 
@@ -109,7 +110,8 @@ function AppContent() {
           <Route path="/stories" element={token ? <StoryAlbum /> : <Navigate to="/login" replace />} />
           <Route path="/story/:id" element={token ? <StoryDetails /> : <Navigate to="/login" replace />} />
           <Route path="/create-story" element={token ? <CreateStory /> : <Navigate to="/login" replace />} />
-          
+          <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />
+
           {/* Page 404 */}
           <Route path="*" element={<div>404 Not Found</div>} />
         </Routes>

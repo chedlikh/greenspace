@@ -1,6 +1,7 @@
 package com.example.app.Entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -34,17 +35,15 @@ public class Site {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TypeSite type;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "societe_id")
-    @JsonIgnore
+    @JsonIgnoreProperties("sites")
     private Societe societe;
 
 
-    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL, fetch = FetchType.LAZY,orphanRemoval = true)
-    @JsonIgnore
-    private Set<User> users = new HashSet<>(); // Initialize the Set
-    @ManyToMany(mappedBy = "sites", fetch = FetchType.LAZY)
-    @JsonIgnore
+
+    @ManyToMany(mappedBy = "sites", fetch = FetchType.EAGER)
+    @JsonIgnoreProperties("sites")
     private Set<Gservice> gservices = new HashSet<>();
 
     public Set<Gservice> getGservices() {
@@ -95,11 +94,5 @@ public class Site {
         this.type = type;
     }
 
-    public Set<User> getUsers() {
-        return users;
-    }
 
-    public void setUsers(Set<User> users) {
-        this.users = users;
-    }
 }
