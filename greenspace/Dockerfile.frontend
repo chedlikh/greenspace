@@ -2,7 +2,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install --force --legacy-peer-deps
+
 COPY . .
 # Use the static IP for API_BASE_URL
 ARG API_BASE_URL=http://192.168.0.187:8089
