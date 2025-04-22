@@ -280,8 +280,13 @@ const ProfilePage = () => {
   }
 
   // Base URL for images
-  const imageBaseUrl = 'http://localhost:8089/images/';
+
+  
+  
+
+  const imageBaseUrl = 'http://greenspace.ddns.net:8089/images/';
   const hasActiveStories = userStories.length > 0;
+
 
   return (
     <div className="main-content bg-gray-50 min-h-screen">

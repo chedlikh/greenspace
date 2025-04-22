@@ -4,7 +4,8 @@ import { useSelector, useDispatch  } from "react-redux";
 import { debounce } from 'lodash';
 import { toast } from 'react-toastify';
 
-const API_BASE_URL = "http://localhost:8089";
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://greenspace.ddns.net:8089";
 
 // logoutapi
 export const logoutUser = async (token) => {
@@ -45,6 +46,7 @@ export const useLogout = () => {
     }
   );
 };
+
 
 // Fetch authenticated user details
 export const fetchUserDetails = async (token) => {
