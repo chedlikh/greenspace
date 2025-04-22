@@ -1,6 +1,6 @@
 export const login = async (credentials) => {
 
-  const response = await fetch('http://greenspace.ddns.net:8089login', {
+  const response = await fetch('http://greenspace.ddns.net:8089/login', {
 
 
     method: 'POST',
