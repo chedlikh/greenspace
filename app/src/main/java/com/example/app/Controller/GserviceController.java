@@ -2,6 +2,7 @@ package com.example.app.Controller;
 
 
 import com.example.app.Entities.Gservice;
+import com.example.app.Entities.Poste;
 import com.example.app.Entities.Site;
 import com.example.app.Service.GserviceServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/gservices")
@@ -67,5 +69,9 @@ public class GserviceController {
         } catch (GserviceServiceImpl.ResourceNotFoundException ex) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
+    }
+    @GetMapping("/{serviceId}/postes")
+    public ResponseEntity<Set<Poste>> getPostByServiceId(@PathVariable Long serviceId) {
+        return ResponseEntity.ok(gserviceService.getPosteByServiceId(serviceId));
     }
 }

@@ -283,4 +283,5 @@ public class User implements UserDetails {
     public List<Story> getStories() {
         return stories;
     }
+
 }

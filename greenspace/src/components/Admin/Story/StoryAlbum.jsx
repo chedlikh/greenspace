@@ -1,5 +1,5 @@
 import { useStories, useDeleteStory } from '../../../services/storyService';
-import { useStoryMediaUrl } from '../../../services/storyService';
+import { getStoryMediaUrl } from '../../../services/storyService';
 import { useState, useEffect, useRef } from 'react';
 import { 
   FiTrash2, FiHeart, FiMessageSquare, 
@@ -13,17 +13,18 @@ const API_BASE_URL = 'http://192.168.0.187:8089';
 
 const AuthMedia = ({ src, alt, className, type = 'IMAGE', ...props }) => {
   const [objectUrl, setObjectUrl] = useState(null);
+  const token = useSelector((state) => state.auth.token);
 
   useEffect(() => {
     let isMounted = true;
     
     const loadMedia = async () => {
       try {
-        if (!src?.url || !src?.token) return;
+        if (!src) return;
         
-        const response = await fetch(src.url, {
+        const response = await fetch(src, {
           headers: {
-            Authorization: `Bearer ${src.token}`
+            Authorization: `Bearer ${token}`
           }
         });
         
@@ -46,7 +47,7 @@ const AuthMedia = ({ src, alt, className, type = 'IMAGE', ...props }) => {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [src]);
+  }, [src, token]);
 
   if (type === 'VIDEO') {
     return (
@@ -86,13 +87,15 @@ const AuthMedia = ({ src, alt, className, type = 'IMAGE', ...props }) => {
 };
 
 const StoriesAlbum = () => {
+  const token = useSelector((state) => state.auth.token);
   const { data: stories = [], isLoading, isError, error } = useStories();
-  const getMediaUrl = useStoryMediaUrl();
   const { mutate: deleteStory } = useDeleteStory();
   const [currentStoryIndex, setCurrentStoryIndex] = useState(null);
   const [isViewingStories, setIsViewingStories] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all', 'active', or 'expired'
+  const [progress, setProgress] = useState(0);
   const storyViewerRef = useRef(null);
+  const progressInterval = useRef(null);
 
   // Filter stories based on current filter
   const filteredStories = stories.filter(story => {
@@ -114,14 +117,18 @@ const StoriesAlbum = () => {
     setCurrentStoryIndex(index);
     setIsViewingStories(true);
     document.body.style.overflow = 'hidden';
+    startProgressTimer();
   };
 
   const closeStoryViewer = () => {
     setIsViewingStories(false);
     document.body.style.overflow = 'auto';
+    clearProgressTimer();
   };
 
   const navigateStory = (direction) => {
+    clearProgressTimer();
+    setProgress(0);
     setCurrentStoryIndex(prev => {
       if (direction === 'next') {
         return prev < filteredStories.length - 1 ? prev + 1 : 0;
@@ -129,6 +136,30 @@ const StoriesAlbum = () => {
         return prev > 0 ? prev - 1 : filteredStories.length - 1;
       }
     });
+    startProgressTimer();
+  };
+
+  const startProgressTimer = () => {
+    clearProgressTimer();
+    setProgress(0);
+    
+    progressInterval.current = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearProgressTimer();
+          navigateStory('next');
+          return 0;
+        }
+        return prev + (100 / 50); // 5 seconds total (100%/50 = 2% per 100ms)
+      });
+    }, 100);
+  };
+
+  const clearProgressTimer = () => {
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current);
+      progressInterval.current = null;
+    }
   };
 
   useEffect(() => {
@@ -145,7 +176,10 @@ const StoriesAlbum = () => {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearProgressTimer();
+    };
   }, [isViewingStories, filteredStories]);
 
   const currentStory = filteredStories[currentStoryIndex] || {};
@@ -213,21 +247,30 @@ const StoriesAlbum = () => {
               {/* Navigation Arrows */}
               <button 
                 className="absolute left-4 z-10 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-all"
-                onClick={() => navigateStory('prev')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateStory('prev');
+                }}
               >
                 <FiChevronLeft size={24} />
               </button>
               
               <button 
                 className="absolute right-4 z-10 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-all"
-                onClick={() => navigateStory('next')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateStory('next');
+                }}
               >
                 <FiChevronRight size={24} />
               </button>
               
               {/* Close Button */}
               <button
-                onClick={closeStoryViewer}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeStoryViewer();
+                }}
                 className="absolute top-4 right-4 z-10 p-2 bg-black bg-opacity-50 rounded-full text-white hover:bg-opacity-70 transition-all"
               >
                 <FiX size={24} />
@@ -238,17 +281,22 @@ const StoriesAlbum = () => {
                 {/* Progress Bar */}
                 <div className="w-full h-1 bg-gray-700 mb-2">
                   <div 
-                    className="h-full bg-white transition-all duration-300"
-                    style={{ width: '50%' }} // You can animate this based on time
+                    className="h-full bg-white transition-all duration-100"
+                    style={{ width: `${progress}%` }}
                   />
                 </div>
                 
                 {/* User Info */}
                 <div className="flex items-center p-4">
                   <img
-                    src={`${API_BASE_URL}/images/${currentStory.user?.photoProfile}`}
+                    src={currentStory.user?.photoProfile 
+                      ? `${API_BASE_URL}/images/${currentStory.user.photoProfile}` 
+                      : `${API_BASE_URL}/images/default-profile.jpg`}
                     alt={currentStory.user?.username}
                     className="w-10 h-10 rounded-full mr-3 object-cover"
+                    onError={(e) => {
+                      e.target.src = `${API_BASE_URL}/images/default-profile.jpg`;
+                    }}
                   />
                   <div>
                     <p className="font-semibold text-white">{currentStory.user?.username}</p>
@@ -267,7 +315,7 @@ const StoriesAlbum = () => {
                 {/* Story Media */}
                 <div className="flex-1 flex items-center justify-center">
                   <AuthMedia
-                    src={getMediaUrl(currentStory.mediaUrl)}
+                    src={getStoryMediaUrl(currentStory.mediaUrl, token).url}
                     alt={currentStory.caption || 'Story'}
                     className="w-full h-full object-contain"
                     type={currentStory.mediaType}
@@ -294,7 +342,10 @@ const StoriesAlbum = () => {
                     </div>
                     
                     <button 
-                      onClick={() => handleDelete(currentStory.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(currentStory.id);
+                      }}
                       className="text-white hover:text-red-500"
                     >
                       <FiTrash2 size={20} />
@@ -322,7 +373,7 @@ const StoriesAlbum = () => {
             {filteredStories.map((story, index) => (
               <div 
                 key={story.id} 
-                className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 bg-white group"
+                className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 bg-white group cursor-pointer"
                 onClick={() => openStoryViewer(index)}
               >
                 {/* Expired indicator */}
@@ -334,7 +385,7 @@ const StoriesAlbum = () => {
                 )}
                 
                 <AuthMedia
-                  src={getMediaUrl(story.mediaUrl)}
+                  src={getStoryMediaUrl(story.mediaUrl, token).url}
                   alt={story.caption || 'Story'}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   type={story.mediaType}
@@ -343,9 +394,14 @@ const StoriesAlbum = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
                   <div className="flex items-center">
                     <img
-                      src={`${API_BASE_URL}/images/${story.user?.photoProfile}`}
+                      src={story.user?.photoProfile 
+                        ? `${API_BASE_URL}/images/${story.user.photoProfile}` 
+                        : `${API_BASE_URL}/images/default-profile.jpg`}
                       alt={story.user?.username}
                       className="w-6 h-6 rounded-full border-2 border-white mr-2 object-cover"
+                      onError={(e) => {
+                        e.target.src = `${API_BASE_URL}/images/default-profile.jpg`;
+                      }}
                     />
                     <span className="text-white font-medium text-sm truncate">
                       {story.user?.username}

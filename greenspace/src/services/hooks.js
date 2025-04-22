@@ -1,8 +1,50 @@
 //hooks.js file
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch  } from "react-redux";
+import { debounce } from 'lodash';
+import { toast } from 'react-toastify';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://192.168.0.187:8089";
+const API_BASE_URL = "http://localhost:8089";
+
+// logoutapi
+export const logoutUser = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/logout`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Failed to logout:", errorData);
+    throw new Error(errorData.message || "Failed to logout");
+  }
+
+  return response.json();
+};
+
+// customlogoutapi
+
+export const useLogout = () => {
+  const dispatch = useDispatch();
+
+  return useMutation(
+    (token) => logoutUser(token),
+    {
+      onSuccess: () => {
+        // Dispatch Redux logout action to clear local state
+        dispatch(logout());
+      },
+      onError: (error) => {
+        console.error('Logout error:', error);
+        // Even if API logout fails, we should clear local state
+        dispatch(logout());
+      },
+    }
+  );
+};
 
 // Fetch authenticated user details
 export const fetchUserDetails = async (token) => {
@@ -1019,6 +1061,33 @@ export const unassignSiteFromGservice = async ({ gserviceId, siteId, token }) =>
     return { message: "Site unassigned successfully" }; // Fallback for empty response
   }
 };
+// Fetch services for a site
+export const fetchSiteServices = async (siteId, token) => {
+  if (!token) throw new Error("No token provided");
+
+  const response = await fetch(`${API_BASE_URL}/Site/${siteId}/services`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Failed to fetch site's services:", errorData);
+    throw new Error(errorData.message || "Failed to fetch site's services");
+  }
+
+  return response.json();
+};
+
+// Custom hook to fetch services for a site
+export const useSiteServices = (siteId) => {
+  const token = useSelector((state) => state.auth.token);
+
+  return useQuery({
+    queryKey: ["site", siteId, "services"],
+    queryFn: () => fetchSiteServices(siteId, token),
+    enabled: !!siteId && !!token, // Only fetch if the siteId and token are available
+  });
+};
 
 // Custom hooks for Gservice
 
@@ -1238,6 +1307,22 @@ export const fetchServicesByPosteId = async (posteId, token) => {
 
   return response.json();
 };
+// getpostesbyserviceid
+export const getPostByServiceId = async (serviceId, token) => {
+  if (!token) throw new Error("No token provided");
+
+  const response = await fetch(`${API_BASE_URL}/api/gservices/${serviceId}/postes`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Failed to fetch poste services:", errorData);
+    throw new Error(errorData.message || "Failed to fetch poste services");
+  }
+
+  return response.json();
+};
 
 // Fetch all services
 export const fetchServices = async (token) => {
@@ -1389,6 +1474,15 @@ export const useServicesByPosteId = (posteId) => {
     queryKey: ["posteServices", posteId],
     queryFn: () => fetchServicesByPosteId(posteId, token),
     enabled: !!posteId && !!token,
+  });
+};
+export const usePosteByServiceId = (serviceId) => {
+  const token = useSelector((state) => state.auth.token);
+
+  return useQuery({
+    queryKey: ["servicesPostes", serviceId],
+    queryFn: () => getPostByServiceId(serviceId, token),
+    enabled: !!serviceId && !!token,
   });
 };
 
@@ -1584,7 +1678,10 @@ const deleteSondage = async ({ id, token }) => {
 
 // Assign service to sondage
 const assignServiceToSondage = async ({ sondageId, serviceId, token }) => {
+  console.log('assignServiceToSondage called with:', { sondageId, serviceId });
   if (!token) throw new Error("No token provided");
+  const serviceIdStr = String(serviceId);
+  console.log('Final URL being called:', `${API_BASE_URL}/api/sondages/${sondageId}/services/${serviceIdStr}`);
   
   const response = await fetch(`${API_BASE_URL}/api/sondages/${sondageId}/services/${serviceId}`, {
     method: 'POST',
@@ -1604,24 +1701,45 @@ const assignServiceToSondage = async ({ sondageId, serviceId, token }) => {
 
 // Unassign service from sondage
 const unassignServiceFromSondage = async ({ sondageId, serviceId, token }) => {
-  if (!token) throw new Error("No token provided");
-  
+  if (!token) {
+    throw new Error('No token provided');
+  }
+
+  if (!sondageId || !serviceId) {
+    throw new Error('Missing sondageId or serviceId');
+  }
+
+  console.log(`Sending DELETE request to ${API_BASE_URL}/api/sondages/${sondageId}/services/${serviceId}`); // Debug log
+
   const response = await fetch(`${API_BASE_URL}/api/sondages/${sondageId}/services/${serviceId}`, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("Failed to unassign service from sondage:", errorData);
-    throw new Error(errorData.message || "Failed to unassign service from sondage");
-  }
-  
-  return response.json();
-};
 
+  if (!response.ok) {
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch (e) {
+      errorData = { message: 'Unknown error occurred' };
+    }
+    console.error('Failed to unassign service from sondage:', {
+      status: response.status,
+      statusText: response.statusText,
+      errorData,
+    });
+    throw new Error(errorData.message || 'Failed to unassign service from sondage');
+  }
+
+  // DELETE requests may not return a body, so handle empty response
+  try {
+    return await response.json();
+  } catch (e) {
+    return { success: true }; // Fallback for empty response
+  }
+};
 // React Query hooks
 export const useSondages = () => {
   const token = useSelector((state) => state.auth.token);
@@ -1698,25 +1816,58 @@ export const useAssignServiceToSondage = (sondageId) => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (serviceId) => assignServiceToSondage({ sondageId, serviceId, token }),
+    mutationFn: (serviceId) => {
+      const actualServiceId = typeof serviceId === 'object' 
+        ? serviceId?.serviceId 
+        : serviceId;
+      
+      if (actualServiceId === undefined || actualServiceId === null) {
+        throw new Error('No serviceId provided');
+      }
+
+      return assignServiceToSondage({ 
+        sondageId, 
+        serviceId: actualServiceId, 
+        token 
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sondageServices', sondageId] });
       queryClient.invalidateQueries({ queryKey: ['sondage', sondageId] });
-      alert("Service assigned to sondage successfully!");
+      queryClient.invalidateQueries({ queryKey: ['notifications'] }); // Invalidate notifications
     },
+    onError: (error) => {
+      console.error('Assignment failed:', error);
+    }
   });
 };
 
 export const useUnassignServiceFromSondage = (sondageId) => {
   const token = useSelector((state) => state.auth.token);
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (serviceId) => unassignServiceFromSondage({ sondageId, serviceId, token }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sondageServices', sondageId] });
-      queryClient.invalidateQueries({ queryKey: ['sondage', sondageId] });
-      alert("Service unassigned from sondage successfully!");
+    mutationFn: (serviceId) => {
+      const actualServiceId = typeof serviceId === 'object' ? serviceId?.serviceId : serviceId;
+      if (actualServiceId === undefined || actualServiceId === null) {
+        throw new Error('No valid serviceId provided');
+      }
+      console.log(`Unassigning service ${actualServiceId} from sondage ${sondageId}`);
+      return unassignServiceFromSondage({ sondageId, serviceId: actualServiceId, token });
+    },
+    onSuccess: debounce(() => {
+      console.log('Service unassigned successfully');
+      // Batch invalidate both queries
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          (query.queryKey[0] === 'sondageServices' && query.queryKey[1] === sondageId) ||
+          (query.queryKey[0] === 'sondage' && query.queryKey[1] === sondageId),
+      });
+      toast.success('Service unassigned from sondage successfully!');
+    }, 300),
+    onError: (error) => {
+      console.error('Failed to unassign service:', error.message);
+      toast.error(`Error: ${error.message}`);
     },
   });
 };

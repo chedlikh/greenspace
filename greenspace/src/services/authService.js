@@ -1,6 +1,5 @@
 export const login = async (credentials) => {
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://192.168.0.187:8089";
-  const response = await fetch(`${API_BASE_URL}/login`, {
+  const response = await fetch('http://localhost:8089/login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

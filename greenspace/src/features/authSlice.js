@@ -1,25 +1,37 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { fetchUserDetails } from '../services/hooks';
+import { fetchUserDetails, logoutUser } from '../services/hooks';
 
-// Helper function to load state from localStorage
 const loadAuthState = () => {
   const token = localStorage.getItem('token');
   const userString = localStorage.getItem('user');
-  const user = userString ? JSON.parse(userString) : null; // Safely parse user
+  const user = userString ? JSON.parse(userString) : null;
   return { token, user };
 };
 
-// Async thunk for fetching user details
 export const fetchUserDetailsThunk = createAsyncThunk(
   'auth/fetchUserDetails',
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No token found');
-      }
-      const userDetails = await fetchUserDetails(token);
-      return userDetails;
+      if (!token) throw new Error('No token found');
+      return await fetchUserDetails(token);
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+export const logoutThunk = createAsyncThunk(
+  'auth/logout',
+  async (_, { rejectWithValue, getState, dispatch }) => {
+    try {
+      const { token } = getState().auth;
+      if (token) await logoutUser(token);
+      
+      // Clear notifications on logout
+      dispatch(clearNotifications());
+      
+      return true;
     } catch (error) {
       return rejectWithValue(error.message);
     }
@@ -33,6 +45,7 @@ const authSlice = createSlice({
     user: null,
     isLoading: true,
     error: null,
+    isLoggingOut: false,
   },
   reducers: {
     loginStart: (state) => {
@@ -43,13 +56,8 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.token = action.payload.token;
       state.user = action.payload.user;
-      // Save token and user to localStorage
       localStorage.setItem('token', action.payload.token);
       localStorage.setItem('user', JSON.stringify(action.payload.user));
-      console.log('Token and user saved to localStorage:', {
-        token: action.payload.token,
-        user: action.payload.user,
-      });
     },
     loginFailure: (state, action) => {
       state.isLoading = false;
@@ -58,20 +66,15 @@ const authSlice = createSlice({
     logout: (state) => {
       state.token = null;
       state.user = null;
-      // Clear token and user from localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      console.log('Token and user cleared from localStorage');
-
     },
     loadUser: (state) => {
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user'));
-        console.log('Loaded token and user from localStorage:', { token, user });
-        state.token = token;
-        state.user = user;
-        state.isLoading = false; // Assure-toi que l'état est mis à jour ici
-      },
+      const { token, user } = loadAuthState();
+      state.token = token;
+      state.user = user;
+      state.isLoading = false;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -82,14 +85,33 @@ const authSlice = createSlice({
       .addCase(fetchUserDetailsThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
+        localStorage.setItem('user', JSON.stringify(action.payload));
       })
       .addCase(fetchUserDetailsThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+      })
+      .addCase(logoutThunk.pending, (state) => {
+        state.isLoggingOut = true;
+        state.error = null;
+      })
+      .addCase(logoutThunk.fulfilled, (state) => {
+        state.token = null;
+        state.user = null;
+        state.isLoggingOut = false;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      })
+      .addCase(logoutThunk.rejected, (state, action) => {
+        state.isLoggingOut = false;
+        state.error = action.payload;
+        state.token = null;
+        state.user = null;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       });
   },
 });
 
-// Export all actions
 export const { loginStart, loginSuccess, loginFailure, logout, loadUser } = authSlice.actions;
 export default authSlice.reducer;

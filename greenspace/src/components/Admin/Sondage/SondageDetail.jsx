@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/components/Admin/Sondage/SondageDetail.jsx
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   useSondageById,
@@ -8,14 +9,26 @@ import {
   useAssignServiceToSondage,
   useUnassignServiceFromSondage,
   useServices,
-} from "../../../services/hooks"; // Adjust import path as needed
+} from "../../../services/hooks";
 
 const SondageDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const sondageId = parseInt(id);
+  const renderCount = useRef(0);
 
-  // Fetch sondage details
+  // Log renders with context
+  useEffect(() => {
+    renderCount.current += 1;
+    console.log(
+      `SondageDetail rendered ${renderCount.current} times, sondage:`,
+      sondage?.titre,
+      "assignedServices:",
+      assignedServices?.length
+    );
+  });
+
+  // Hooks called at top level
   const {
     data: sondage,
     isLoading: sondageLoading,
@@ -23,7 +36,6 @@ const SondageDetail = () => {
     error: sondageErrorMessage,
   } = useSondageById(sondageId);
 
-  // Fetch sondage's services
   const {
     data: assignedServices,
     isLoading: servicesLoading,
@@ -31,16 +43,13 @@ const SondageDetail = () => {
     error: servicesErrorMessage,
   } = useServicesBySondageId(sondageId);
 
-  // Fetch all available services for assignment
   const { data: allServices, isLoading: allServicesLoading } = useServices();
 
-  // Mutations
   const updateSondage = useUpdateSondage(sondageId);
   const deleteSondage = useDeleteSondage(sondageId);
   const assignService = useAssignServiceToSondage(sondageId);
   const unassignService = useUnassignServiceFromSondage(sondageId);
 
-  // State for form
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     titre: "",
@@ -50,28 +59,38 @@ const SondageDetail = () => {
   });
   const [selectedServiceId, setSelectedServiceId] = useState("");
 
-  // Initialize form data when sondage data is loaded
+  // Optimize formData updates to prevent unnecessary renders
   useEffect(() => {
     if (sondage) {
-      setFormData({
-        titre: sondage.titre,
-        description: sondage.description,
-        startDate: sondage.startDate,
-        endDate: sondage.endDate,
+      setFormData((prev) => {
+        if (
+          prev.titre === sondage.titre &&
+          prev.description === sondage.description &&
+          prev.startDate === sondage.startDate &&
+          prev.endDate === sondage.endDate
+        ) {
+          console.log("Skipping formData update: no changes");
+          return prev;
+        }
+        console.log("Updating formData with new sondage data");
+        return {
+          titre: sondage.titre,
+          description: sondage.description,
+          startDate: sondage.startDate,
+          endDate: sondage.endDate,
+        };
       });
     }
   }, [sondage]);
 
-  // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
-  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     updateSondage.mutate(
@@ -84,7 +103,6 @@ const SondageDetail = () => {
     );
   };
 
-  // Handle sondage deletion
   const handleDelete = () => {
     if (window.confirm("Are you sure you want to delete this sondage?")) {
       deleteSondage.mutate(null, {
@@ -95,27 +113,25 @@ const SondageDetail = () => {
     }
   };
 
-  // Handle service assignment
   const handleAssignService = () => {
     if (selectedServiceId) {
+      console.log(`Assigning service ${selectedServiceId} to sondage ${sondageId}`);
       assignService.mutate({ serviceId: parseInt(selectedServiceId) });
       setSelectedServiceId("");
     }
   };
 
-  // Handle service unassignment
   const handleUnassignService = (serviceId) => {
     if (window.confirm("Are you sure you want to remove this service from the sondage?")) {
+      console.log(`Unassigning service ${serviceId} from sondage ${sondageId}`);
       unassignService.mutate({ serviceId });
     }
   };
 
-  // Loading state
   if (sondageLoading || servicesLoading || allServicesLoading) {
     return <div>Loading...</div>;
   }
 
-  // Error state
   if (sondageError) {
     return <div>Error loading sondage: {sondageErrorMessage?.message}</div>;
   }
@@ -124,7 +140,6 @@ const SondageDetail = () => {
     return <div>Error loading services: {servicesErrorMessage?.message}</div>;
   }
 
-  // Get services available for assignment (services not already assigned)
   const availableServices = allServices
     ? allServices.filter(
         (service) =>
@@ -133,17 +148,16 @@ const SondageDetail = () => {
       )
     : [];
 
-  // Get status badge class
   const getStatusBadgeClass = (status) => {
     switch (status) {
-      case 'WILL_START_SOON':
-        return 'bg-warning';
-      case 'STARTED':
-        return 'bg-success';
-      case 'FINISHED':
-        return 'bg-secondary';
+      case "WILL_START_SOON":
+        return "bg-warning";
+      case "STARTED":
+        return "bg-success";
+      case "FINISHED":
+        return "bg-secondary";
       default:
-        return 'bg-primary';
+        return "bg-primary";
     }
   };
 
@@ -174,10 +188,7 @@ const SondageDetail = () => {
                       >
                         Edit
                       </button>
-                      <button
-                        className="btn btn-danger"
-                        onClick={handleDelete}
-                      >
+                      <button className="btn btn-danger" onClick={handleDelete}>
                         Delete
                       </button>
                     </>
@@ -185,7 +196,6 @@ const SondageDetail = () => {
                 </div>
               </div>
 
-              {/* Sondage Details / Edit Form */}
               {editing ? (
                 <form onSubmit={handleSubmit}>
                   <div className="row">
@@ -298,7 +308,6 @@ const SondageDetail = () => {
 
               <hr className="my-4" />
 
-              {/* Assigned Services */}
               <h5 className="font-xss fw-600 mb-3">Assigned Services</h5>
 
               <div className="table-responsive mb-4">
@@ -320,6 +329,7 @@ const SondageDetail = () => {
                             <button
                               className="btn btn-sm btn-danger"
                               onClick={() => handleUnassignService(service.id)}
+                              disabled={unassignService.isLoading}
                             >
                               Remove
                             </button>
@@ -337,7 +347,6 @@ const SondageDetail = () => {
                 </table>
               </div>
 
-              {/* Assign New Service */}
               <h5 className="font-xss fw-600 mb-3">Assign New Service</h5>
 
               <div className="row">
@@ -359,7 +368,7 @@ const SondageDetail = () => {
                   <button
                     className="btn btn-primary w-100"
                     onClick={handleAssignService}
-                    disabled={!selectedServiceId}
+                    disabled={!selectedServiceId || assignService.isLoading}
                   >
                     Assign Service
                   </button>

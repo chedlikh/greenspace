@@ -2,6 +2,7 @@ package com.example.app.Controller;
 
 import com.example.app.Entities.Gservice;
 import com.example.app.Entities.Sondage;
+import com.example.app.Service.INotificationService;
 import com.example.app.Service.ISondageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,10 +17,12 @@ import java.util.Set;
 public class SondageController {
 
     private final ISondageService sondageService;
+    public final INotificationService notificationService;
 
     @Autowired
-    public SondageController(ISondageService sondageService) {
+    public SondageController(ISondageService sondageService, INotificationService notificationService) {
         this.sondageService = sondageService;
+        this.notificationService = notificationService;
     }
 
     @PostMapping
@@ -57,8 +60,9 @@ public class SondageController {
     public ResponseEntity<Sondage> assignServiceToSondage(
             @PathVariable Long sondageId,
             @PathVariable Long serviceId) {
+        // The assignServiceToSondage method already handles notifications
         Sondage sondage = sondageService.assignServiceToSondage(sondageId, serviceId);
-        return new ResponseEntity<>(sondage, HttpStatus.OK);
+        return ResponseEntity.ok(sondage);
     }
 
     @DeleteMapping("/{sondageId}/services/{serviceId}")

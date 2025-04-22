@@ -1,5 +1,6 @@
 package com.example.app.Service;
 
+import com.example.app.Entities.Gservice;
 import com.example.app.Entities.Site;
 import com.example.app.Entities.User;
 import com.example.app.Repository.SiteRepo;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class SiteService implements ISiteService{
@@ -50,6 +52,12 @@ public class SiteService implements ISiteService{
     @Override
     public void deleteSite(Long id) {
         siteRepo.deleteById(id);
+    }
+
+    @Override
+    public Set<Gservice> getServicesBySiteId(Long siteId) {
+        Site site = getSiteById(siteId);
+        return site.getGservices();
     }
 
 

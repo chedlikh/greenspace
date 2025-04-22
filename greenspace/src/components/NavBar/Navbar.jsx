@@ -1,19 +1,50 @@
-import React, { useEffect } from 'react';
+// src/components/NavBar/Navbar.jsx
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import Dropdown from 'react-bootstrap/Dropdown';
-import { logout, fetchUserDetailsThunk } from '../../features/authSlice';
+import { logoutThunk, fetchUserDetailsThunk } from '../../features/authSlice';
+import { useNotificationSubscription, useNotificationActions } from '../../services/websocket';
+import { format } from 'date-fns';
+import NotificationList from '../Notification/NotificationList';
 import './Navbar.css';
 
 const Navbar = () => {
   const dispatch = useDispatch();
-  const { user, isLoading } = useSelector((state) => state.auth);
-
+  const { user, isLoading, isLoggingOut } = useSelector((state) => state.auth);
+  const { unreadCount } = useSelector((state) => state.notifications);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const notificationsRef = useRef(null);
+  
+  useNotificationSubscription();
+  const { markAllAsRead } = useNotificationActions();
+  
   useEffect(() => {
     if (user && !user.email) {
       dispatch(fetchUserDetailsThunk());
     }
   }, [user, dispatch]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    dispatch(logoutThunk());
+  };
+
+  const toggleNotifications = () => {
+    setNotificationsOpen(prev => !prev);
+  };
 
   if (isLoading) {
     return <div className="loading-container">Loading...</div>;
@@ -22,7 +53,6 @@ const Navbar = () => {
   return (
     <div className="modern-navbar">
       <div className="navbar-container">
-        {/* Main Navigation Items */}
         <div className="nav-links">
           <Link to="/home" className="nav-item">
             <i className="feather-home"></i>
@@ -32,17 +62,35 @@ const Navbar = () => {
             <i className="feather-compass"></i>
             <span>Explore</span>
           </Link>
-          <Link to="/notifications" className="nav-item">
-            <i className="feather-bell"></i>
-            <span>Notifications</span>
-          </Link>
+          
+          <div className="nav-item notification-nav-item" ref={notificationsRef}>
+            <div className="notifications-toggle" onClick={toggleNotifications}>
+              <i className="feather-bell"></i>
+              {unreadCount > 0 && (
+                <span className="notification-badge">{unreadCount}</span>
+              )}
+              <span>Notifications</span>
+            </div>
+            {notificationsOpen && (
+              <div className="notifications-dropdown">
+                <div className="notifications-header">
+                  <h3>Notifications ({unreadCount} unread)</h3>
+                  {unreadCount > 0 && (
+                    <button className="mark-all-read-btn" onClick={markAllAsRead}>
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+                <NotificationList /> {/* Use NotificationList */}
+              </div>
+            )}
+          </div>
           <Link to="/messages" className="nav-item">
             <i className="feather-message-circle"></i>
             <span>Messages</span>
           </Link>
         </div>
-
-        {/* Search Bar */}
+        {/* Rest of the navbar unchanged */}
         <div className="search-container">
           <div className="search-input-wrapper">
             <i className="feather-search search-icon"></i>
@@ -53,18 +101,13 @@ const Navbar = () => {
             />
           </div>
         </div>
-
-        {/* User Section */}
         <div className="user-section">
           {user ? (
             <>
-              {/* Create Post Button */}
               <button className="create-post-btn">
                 <i className="feather-plus-circle"></i>
                 <span>Create</span>
               </button>
-            
-              {/* Settings Dropdown */}
               <Dropdown>
                 <Dropdown.Toggle as="div" id="dropdown-settings" className="settings-toggle">
                   <i className="feather-settings"></i>
@@ -83,8 +126,6 @@ const Navbar = () => {
                   </div>
                 </Dropdown.Menu>
               </Dropdown>
-              
-              {/* User Profile Dropdown */}
               <Dropdown>
                 <Dropdown.Toggle as="div" id="dropdown-profile" className="profile-toggle">
                   <img
@@ -98,7 +139,9 @@ const Navbar = () => {
                   <Dropdown.Item as={Link} to="/settings">Account Settings</Dropdown.Item>
                   <Dropdown.Item as={Link} to="/help">Help Center</Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item onClick={() => dispatch(logout())}>Logout</Dropdown.Item>
+                  <Dropdown.Item onClick={handleLogout} disabled={isLoggingOut}>
+                    {isLoggingOut ? 'Logging out...' : 'Logout'}
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             </>

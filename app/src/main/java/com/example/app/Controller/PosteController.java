@@ -86,4 +86,5 @@ public class PosteController {
         List<User> users = posteService.getUsersByPosteId(posteId);
         return ResponseEntity.ok(users);
     }
+
 }

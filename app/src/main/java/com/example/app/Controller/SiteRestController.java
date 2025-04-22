@@ -1,6 +1,7 @@
 package com.example.app.Controller;
 
 import com.example.app.Entities.AuthenticationResponse;
+import com.example.app.Entities.Gservice;
 import com.example.app.Entities.Site;
 import com.example.app.Entities.User;
 import com.example.app.Repository.UserRepo;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/Site")
@@ -55,6 +57,10 @@ public class SiteRestController {
     public ResponseEntity<Void> deleteSite(@PathVariable Long id) {
         siteService.deleteSite(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    @GetMapping("/{siteId}/services")
+    public ResponseEntity<Set<Gservice>> getServicesByPosteId(@PathVariable Long siteId) {
+        return ResponseEntity.ok(siteService.getServicesBySiteId(siteId));
     }
 
 

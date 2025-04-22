@@ -1,6 +1,7 @@
 package com.example.app.Service;
 
 import com.example.app.Entities.Gservice;
+import com.example.app.Entities.Poste;
 import com.example.app.Entities.Site;
 import com.example.app.Repository.GserviceRepository;
 import com.example.app.Repository.SiteRepo;
@@ -83,5 +84,11 @@ public class GserviceServiceImpl implements IGservice {
             super(message);
         }
     }
+    @Override
+    public Set<Poste> getPosteByServiceId(Long serviceId) {
+        Gservice gservice = getGserviceById(serviceId);
+        return gservice.getPostes();
+    }
+
 
 }
