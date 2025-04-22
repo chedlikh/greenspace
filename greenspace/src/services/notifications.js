@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 
-const API_BASE_URL = "http://localhost:8089";
+const API_BASE_URL = "http://greenspace.ddns.net:8089";
 
 // Fetch unread notifications
 export const fetchUnreadNotifications = async (userId, token) => {
