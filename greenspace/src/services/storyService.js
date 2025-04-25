@@ -1,10 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 
-
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://greenspace.ddns.net:8089";
-
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8089";
 
 // Fetch all stories
 export const fetchStories = async (token) => {
@@ -15,13 +12,9 @@ export const fetchStories = async (token) => {
   });
 
   if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to fetch stories:", errorData);
-      throw new Error(errorData.message || "Failed to fetch stories");
-    } catch (e) {
-      throw new Error("Failed to fetch stories");
-    }
+    const errorData = await response.json();
+    console.error("Failed to fetch stories:", errorData);
+    throw new Error(errorData.message || "Failed to fetch stories");
   }
 
   return response.json();
@@ -36,13 +29,9 @@ export const fetchStoryById = async (id, token) => {
   });
 
   if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to fetch story:", errorData);
-      throw new Error(errorData.message || "Failed to fetch story");
-    } catch (e) {
-      throw new Error("Failed to fetch story");
-    }
+    const errorData = await response.json();
+    console.error("Failed to fetch story:", errorData);
+    throw new Error(errorData.message || "Failed to fetch story");
   }
 
   return response.json();
@@ -51,87 +40,114 @@ export const fetchStoryById = async (id, token) => {
 // Fetch active stories by username
 export const fetchActiveStoriesByUser = async (username, token) => {
   if (!token) throw new Error("No token provided");
-  if (!username) throw new Error("No username provided");
 
   const response = await fetch(`${API_BASE_URL}/api/stories/user/${username}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Failed to fetch user stories:", errorData);
+    throw new Error(errorData.message || "Failed to fetch user stories");
+  }
+
+  return response.json();
+};
+
+// Create a new story
+export const createStory = async ({ storyData, token }) => {
+  if (!token) throw new Error("No token provided");
+  if (!storyData.username) throw new Error("Username is required");
+  
+  const formData = new FormData();
+  let url;
+  
+  if (storyData.type === 'text') {
+    // Text story
+    url = `${API_BASE_URL}/api/stories/text/user/${storyData.username}`;
+    formData.append('text', storyData.textContent);
+    if (storyData.backgroundColor) {
+      formData.append('backgroundColor', storyData.backgroundColor);
+    }
+    if (storyData.fontStyle) {
+      formData.append('fontStyle', storyData.fontStyle);
+    }
+  } else {
+    // Media story
+    url = `${API_BASE_URL}/api/stories/media/user/${storyData.username}`;
+    if (storyData.mediaFile) {
+      formData.append('file', storyData.mediaFile);
+    }
+    if (storyData.caption) {
+      formData.append('caption', storyData.caption);
+    }
+  }
+
+  console.log(`Sending request to: ${url}`);
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    // Better error handling
     try {
       const errorData = await response.json();
-      console.error("Failed to fetch user stories:", errorData);
-      throw new Error(errorData.message || "Failed to fetch user stories");
+      console.error("Failed to create story:", errorData);
+      throw new Error(errorData.message || "Failed to create story");
     } catch (e) {
-      throw new Error("Failed to fetch user stories");
+      throw new Error(`Failed to create story: ${response.status} ${response.statusText}`);
     }
   }
 
   return response.json();
 };
 
-// Create a new media story - UPDATED to match the controller endpoint
-export const createStory = async ({ mediaFile, caption, mediaType, username, token }) => {
-  if (!token) throw new Error("No token provided");
-  if (!username) throw new Error("No username provided");
-  if (!mediaFile) throw new Error("No media file provided");
-
-  const formData = new FormData();
-  formData.append('file', mediaFile);
+export const useCreateStory = () => {
+  const token = useSelector((state) => state.auth.token);
+  const user = useSelector((state) => state.auth.user);
+  const queryClient = useQueryClient();
   
-  // Caption is optional in the controller
-  if (caption) {
-    formData.append('caption', caption);
-  }
-
-  // This endpoint is specifically for media stories
-  const response = await fetch(`${API_BASE_URL}/api/stories/media/user/${username}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
+  return useMutation({
+    mutationFn: (storyData) => {
+      // Add the username if not provided
+      if (!storyData.username && user) {
+        storyData.username = user.username;
+      }
+      
+      return createStory({ storyData, token });
     },
-    body: formData,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["stories"]);
+      // Also invalidate the user-specific stories
+      if (user) {
+        queryClient.invalidateQueries(["user-stories", user.username]);
+      }
+    },
+    onError: (error) => {
+      console.error("Error creating story:", error);
+    },
   });
-
-  if (!response.ok) {
-    let errorMessage = `Error ${response.status}: Failed to create story`;
-    
-    try {
-      const errorData = await response.json();
-      console.error("Failed to create story:", errorData);
-      errorMessage = errorData.message || errorMessage;
-    } catch (e) {
-      // If the response isn't valid JSON
-      console.error("Failed to parse error response:", e);
-    }
-    
-    throw new Error(errorMessage);
-  }
-
-  // Handle the case where the response body might be empty
-  const text = await response.text();
-  return text ? JSON.parse(text) : {};
 };
 
-// Create a new text story
-export const createTextStory = async ({ text, backgroundColor, fontStyle, username, token }) => {
+// Update story by ID
+export const updateStory = async ({ id, storyData, token }) => {
   if (!token) throw new Error("No token provided");
-  if (!username) throw new Error("No username provided");
-  if (!text) throw new Error("No text content provided");
 
   const formData = new FormData();
-  formData.append('text', text);
-  
-  if (backgroundColor) {
-    formData.append('backgroundColor', backgroundColor);
+  if (storyData.mediaFile) {
+    formData.append('file', storyData.mediaFile);
   }
-  
-  if (fontStyle) {
-    formData.append('fontStyle', fontStyle);
+  if (storyData.caption) {
+    formData.append('caption', storyData.caption);
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/stories/text/user/${username}`, {
-    method: "POST",
+  const response = await fetch(`${API_BASE_URL}/api/stories/${id}`, {
+    method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -139,43 +155,9 @@ export const createTextStory = async ({ text, backgroundColor, fontStyle, userna
   });
 
   if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to create text story:", errorData);
-      throw new Error(errorData.message || "Failed to create text story");
-    } catch (e) {
-      throw new Error("Failed to create text story");
-    }
-  }
-
-  const responseText = await response.text();
-  return responseText ? JSON.parse(responseText) : {};
-};
-
-// Update story caption
-export const updateStoryCaption = async ({ id, caption, token }) => {
-  if (!token) throw new Error("No token provided");
-  if (!caption) throw new Error("No caption provided");
-
-  const formData = new FormData();
-  formData.append('caption', caption);
-
-  const response = await fetch(`${API_BASE_URL}/api/stories/${id}/caption`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to update story caption:", errorData);
-      throw new Error(errorData.message || "Failed to update story caption");
-    } catch (e) {
-      throw new Error("Failed to update story caption");
-    }
+    const errorData = await response.json();
+    console.error("Failed to update story:", errorData);
+    throw new Error(errorData.message || "Failed to update story");
   }
 
   return response.json();
@@ -193,100 +175,9 @@ export const deleteStory = async ({ id, token }) => {
   });
 
   if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to delete story:", errorData);
-      throw new Error(errorData.message || "Failed to delete story");
-    } catch (e) {
-      throw new Error("Failed to delete story");
-    }
-  }
-
-  return true; // The controller returns no content, so just return success
-};
-
-// View a story
-export const viewStory = async ({ storyId, viewerUsername, token }) => {
-  if (!token) throw new Error("No token provided");
-
-  const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}/view/${viewerUsername}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to record story view:", errorData);
-      throw new Error(errorData.message || "Failed to record story view");
-    } catch (e) {
-      throw new Error("Failed to record story view");
-    }
-  }
-
-  return true; // The controller returns no content
-};
-
-// Get story viewers
-export const getStoryViewers = async ({ storyId, token }) => {
-  if (!token) throw new Error("No token provided");
-
-  const response = await fetch(`${API_BASE_URL}/api/stories/${storyId}/viewers`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to fetch story viewers:", errorData);
-      throw new Error(errorData.message || "Failed to fetch story viewers");
-    } catch (e) {
-      throw new Error("Failed to fetch story viewers");
-    }
-  }
-
-  return response.json();
-};
-
-// Get stories for feed
-export const getStoriesForFeed = async ({ username, token }) => {
-  if (!token) throw new Error("No token provided");
-
-  const response = await fetch(`${API_BASE_URL}/api/stories/feed/${username}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to fetch feed stories:", errorData);
-      throw new Error(errorData.message || "Failed to fetch feed stories");
-    } catch (e) {
-      throw new Error("Failed to fetch feed stories");
-    }
-  }
-
-  return response.json();
-};
-
-// Get users with active stories
-export const getUsersWithActiveStories = async (token) => {
-  if (!token) throw new Error("No token provided");
-
-  const response = await fetch(`${API_BASE_URL}/api/stories/users-with-stories`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!response.ok) {
-    try {
-      const errorData = await response.json();
-      console.error("Failed to fetch users with stories:", errorData);
-      throw new Error(errorData.message || "Failed to fetch users with stories");
-    } catch (e) {
-      throw new Error("Failed to fetch users with stories");
-    }
+    const errorData = await response.json();
+    console.error("Failed to delete story:", errorData);
+    throw new Error(errorData.message || "Failed to delete story");
   }
 
   return response.json();
@@ -300,8 +191,11 @@ export const getStoryMediaUrl = (filename, token) => {
   };
 };
 
-export const getProfileMediaUrl = (filename) => {
-  return `${API_BASE_URL}/images/${filename}`;
+export const getprofileMediaUrl = (filename, token) => {
+  return {
+    url: `http://localhost:8089/images/${filename}`,
+    token: token
+  };
 };
 
 export const fetchMediaWithAuth = async (url, token) => {
@@ -314,7 +208,7 @@ export const fetchMediaWithAuth = async (url, token) => {
   });
   
   if (!response.ok) {
-    throw new Error(`Failed to fetch media: ${response.status}`);
+    throw new Error("Failed to fetch media");
   }
   
   return URL.createObjectURL(await response.blob());
@@ -349,94 +243,19 @@ export const useActiveStoriesByUser = (username) => {
   });
 };
 
-export const useCreateStory = () => {
-  const token = useSelector((state) => state.auth.token);
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ mediaFile, caption, mediaType }) => {
-      // Get the current user from state or another source
-      const username = queryClient.getQueryData(['userDetails', token])?.username;
-      
-      if (!username) {
-        throw new Error("User not found or not logged in");
-      }
-      
-      return createStory({ 
-        mediaFile, 
-        caption, 
-        mediaType, 
-        username, 
-        token 
-      });
-    },
-    onSuccess: (data, variables) => {
-      // Get the username to invalidate the proper queries
-      const username = queryClient.getQueryData(['userDetails', token])?.username;
-      
-      if (username) {
-        queryClient.invalidateQueries(["user-stories", username]);
-      }
-      queryClient.invalidateQueries(["stories"]);
-    },
-    onError: (error) => {
-      console.error("Error creating story:", error);
-    },
-  });
-};
 
-export const useCreateTextStory = () => {
-  const token = useSelector((state) => state.auth.token);
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ text, backgroundColor, fontStyle }) => {
-      const username = queryClient.getQueryData(['userDetails', token])?.username;
-      
-      if (!username) {
-        throw new Error("User not found or not logged in");
-      }
-      
-      return createTextStory({ 
-        text, 
-        backgroundColor, 
-        fontStyle, 
-        username, 
-        token 
-      });
-    },
-    onSuccess: (data, variables) => {
-      const username = queryClient.getQueryData(['userDetails', token])?.username;
-      
-      if (username) {
-        queryClient.invalidateQueries(["user-stories", username]);
-      }
-      queryClient.invalidateQueries(["stories"]);
-    },
-    onError: (error) => {
-      console.error("Error creating text story:", error);
-    },
-  });
-};
 
-export const useUpdateStoryCaption = () => {
+export const useUpdateStory = (id) => {
   const token = useSelector((state) => state.auth.token);
   const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: ({ id, caption }) => updateStoryCaption({ id, caption, token }),
-    onSuccess: (data, { id }) => {
+    mutationFn: (storyData) => updateStory({ id, storyData, token }),
+    onSuccess: () => {
       queryClient.invalidateQueries(["story", id]);
       queryClient.invalidateQueries(["stories"]);
-      
-      // Also invalidate user stories since we don't know which user this belongs to
-      const username = queryClient.getQueryData(['userDetails', token])?.username;
-      if (username) {
-        queryClient.invalidateQueries(["user-stories", username]);
-      }
     },
     onError: (error) => {
-      console.error("Error updating story caption:", error);
+      console.error("Error updating story:", error);
     },
   });
 };
@@ -444,17 +263,10 @@ export const useUpdateStoryCaption = () => {
 export const useDeleteStory = () => {
   const token = useSelector((state) => state.auth.token);
   const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: (id) => deleteStory({ id, token }),
     onSuccess: () => {
       queryClient.invalidateQueries(["stories"]);
-      
-      // Also invalidate user stories
-      const username = queryClient.getQueryData(['userDetails', token])?.username;
-      if (username) {
-        queryClient.invalidateQueries(["user-stories", username]);
-      }
     },
     onError: (error) => {
       console.error("Error deleting story:", error);
@@ -462,47 +274,12 @@ export const useDeleteStory = () => {
   });
 };
 
-export const useViewStory = () => {
+export const useStoryMediaUrl = () => {
   const token = useSelector((state) => state.auth.token);
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ storyId, viewerUsername }) => viewStory({ storyId, viewerUsername, token }),
-    onSuccess: (data, { storyId }) => {
-      queryClient.invalidateQueries(["story", storyId]);
-    },
-    onError: (error) => {
-      console.error("Error viewing story:", error);
-    },
-  });
+  return (filename) => getStoryMediaUrl(filename, token);
 };
 
-export const useStoryViewers = (storyId) => {
+export const useprofileMediaUrl = () => {
   const token = useSelector((state) => state.auth.token);
-  
-  return useQuery({
-    queryKey: ["story-viewers", storyId],
-    queryFn: () => getStoryViewers({ storyId, token }),
-    enabled: !!storyId && !!token,
-  });
-};
-
-export const useStoriesForFeed = (username) => {
-  const token = useSelector((state) => state.auth.token);
-  
-  return useQuery({
-    queryKey: ["feed-stories", username],
-    queryFn: () => getStoriesForFeed({ username, token }),
-    enabled: !!username && !!token,
-  });
-};
-
-export const useUsersWithActiveStories = () => {
-  const token = useSelector((state) => state.auth.token);
-  
-  return useQuery({
-    queryKey: ["users-with-stories"],
-    queryFn: () => getUsersWithActiveStories(token),
-    enabled: !!token,
-  });
+  return (filename) => getprofileMediaUrl(filename, token);
 };

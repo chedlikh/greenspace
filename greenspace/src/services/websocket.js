@@ -88,6 +88,7 @@ export const useNotificationSubscription = () => {
   const subscriptionRefs = useRef({});
 
   useEffect(() => {
+    // Early return if not logged in or not connected
     if (!client || !connected || !currentUser) {
       console.log('Skipping subscription: client, connected, or currentUser missing', { client, connected, currentUser });
       return;

@@ -30,25 +30,28 @@ public class NotificationService implements INotificationService {
         this.messagingTemplate = messagingTemplate;
     }
     @Override
-    public NotificationSondage createNotification(NotificationSondage notification) {
-        notification.setCreatedAt(LocalDateTime.now());
+    public void createSondageNotification(String username, String message, String type, Long sondageId) {
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+
+        NotificationSondage notification = new NotificationSondage();
+        notification.setMessage(message);
         notification.setRead(false);
-        NotificationSondage savedNotification = notificationRepository.save(notification);
+        notification.setCreatedAt(LocalDateTime.now());
+        notification.setRecipient(user);
 
-        // Send real-time notification via WebSocket
-        if (notification.getRecipient() != null) {
-            messagingTemplate.convertAndSendToUser(
-                    notification.getRecipient().getUsername(),
-                    "/queue/notifications-update",
-                    Map.of(
-                            "type", "new-notification",
-                            "notification", savedNotification
-                    )
-            );
-        }
+        notification = notificationRepository.save(notification);
 
-        return savedNotification;
+        messagingTemplate.convertAndSendToUser(
+                username,
+                "/queue/notifications-update",
+                Map.of(
+                        "type", "new-notification",
+                        "notification", notification
+                )
+        );
     }
+
 
     @Override
     public void createSondageNotification(Long userId, String message, String type, Long sondageId) {
@@ -76,8 +79,8 @@ public class NotificationService implements INotificationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<NotificationSondage> getUnreadNotifications(Long userId) {
-        return notificationRepository.findByRecipientIdAndIsReadFalse(userId);
+    public List<NotificationSondage> getUnreadNotifications(String username) {
+        return notificationRepository.findByRecipientUsernameAndIsReadFalse(username);
     }
 
     @Override
@@ -88,8 +91,8 @@ public class NotificationService implements INotificationService {
         });
     }
     @Override
-    public void markAllAsRead(Long userId) {
-        List<NotificationSondage> unreadNotifications = getUnreadNotifications(userId);
+    public void markAllAsRead(String username) {
+        List<NotificationSondage> unreadNotifications = getUnreadNotifications(username);
         unreadNotifications.forEach(notification -> {
             notification.setRead(true);
             notificationRepository.save(notification);

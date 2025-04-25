@@ -143,5 +143,11 @@ public class UserService implements UserDetailsService {
             throw new RuntimeException("User not found");
         }
     }
+    public User updateUserStatus(String username, boolean isConnect) {
+        User user = repository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setConnect(isConnect);
+        return repository.save(user);
+    }
 
 }

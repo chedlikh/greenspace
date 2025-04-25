@@ -86,7 +86,7 @@ const ListUsers = () => {
                   {/* Profile Picture */}
                   <div className="relative inline-block mb-4">
                     <img
-                      src={user.photoProfile ? `http://greenspace.ddns.net:8089/images/${user.photoProfile}` : "images/default-user.png"}
+                      src={user.photoProfile ? `http://localhost:8089/images/${user.photoProfile}` : "images/default-user.png"}
                       alt="user"
                       className="w-24 h-24 rounded-full border-4 border-gray-200 object-cover"
                     />

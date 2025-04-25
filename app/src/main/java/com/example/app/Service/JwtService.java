@@ -69,7 +69,7 @@ public class JwtService {
         return (username.equals(user.getUsername())) && !isTokenExpired(token) && validRefreshToken;
     }
 
-    private boolean isTokenExpired(String token) {
+    private boolean isTokenExpire(String token) {
         return extractExpiration(token).before(new Date());
     }
 
@@ -98,6 +98,16 @@ public class JwtService {
 
     public String generateRefreshToken(User user) {
         return generateToken(user, refreshTokenExpire );
+    }
+    public long getExpirationTime(String token) {
+        return extractClaim(token, Claims::getExpiration).getTime();
+    }
+    public boolean isTokenValid(String token, User user) {
+        final String username = extractUsername(token);
+        return (username.equals(user.getUsername())) && !isTokenExpired(token);
+    }
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
     }
 
     private String generateToken(User user, long expireTime) {

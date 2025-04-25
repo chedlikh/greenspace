@@ -10,9 +10,14 @@ import java.util.List;
 public interface INotificationService {
 
 
-    NotificationSondage createNotification(NotificationSondage notification);
+    void createSondageNotification(String username, String message, String type, Long sondageId);
+
     void createSondageNotification(Long userId, String message, String type, Long sondageId);
-    List<NotificationSondage> getUnreadNotifications(Long userId);
+
+    @Transactional(readOnly = true)
+    List<NotificationSondage> getUnreadNotifications(String username);
+
     void markAsRead(Long notificationId);
-    void markAllAsRead(Long userId);
+
+    void markAllAsRead(String username);
 }

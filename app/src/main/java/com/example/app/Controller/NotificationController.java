@@ -20,9 +20,9 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<NotificationSondage>> getUnreadNotifications(@PathVariable Long userId) {
-        return ResponseEntity.ok(notificationService.getUnreadNotifications(userId));
+    @GetMapping("/user/{username}")  // Changed from userId to username
+    public ResponseEntity<List<NotificationSondage>> getUnreadNotifications(@PathVariable String username) {
+        return ResponseEntity.ok(notificationService.getUnreadNotifications(username));
     }
 
     @PutMapping("/{notificationId}/mark-as-read")
@@ -31,22 +31,23 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/mark-all-read/{userId}")
-    public ResponseEntity<Void> markAllAsRead(@PathVariable Long userId) {
-        notificationService.markAllAsRead(userId);
+    @PutMapping("/mark-all-read/{username}")  // Changed from userId to username
+    public ResponseEntity<Void> markAllAsRead(@PathVariable String username) {
+        notificationService.markAllAsRead(username);
         return ResponseEntity.noContent().build();
     }
-    @PostMapping("/test-notification")
 
+    @PostMapping("/test-notification")
     public ResponseEntity<Map<String, String>> sendTestNotification(@RequestBody Map<String, Object> payload) {
-        Long userId = Long.valueOf(payload.get("userId").toString());
+        String username = (String) payload.get("username");  // Changed from userId
         String message = (String) payload.get("message");
         String type = (String) payload.get("type");
         Long sondageId = payload.get("sondageId") != null ?
                 Long.valueOf(payload.get("sondageId").toString()) : null;
 
-        notificationService.createSondageNotification(userId, message, type, sondageId);
+        notificationService.createSondageNotification(username, message, type, sondageId);
 
         return ResponseEntity.ok(Map.of("status", "Notification sent successfully"));
     }
+
 }

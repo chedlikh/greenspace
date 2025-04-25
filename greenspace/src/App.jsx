@@ -35,6 +35,7 @@ import { useNotificationSubscription } from './services/websocket';
 import NotificationManager from './components/NotificationManager';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import HomePage from './components/FrontOffice/HomePage';
 
 
 
@@ -121,6 +122,7 @@ function AppContent() {
           <Route path="/create-story" element={token ? <CreateStory /> : <Navigate to="/login" replace />} />
           <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/profile/:username" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />
+          <Route path="/home" element={token ? <HomePage /> : <Navigate to="/login" replace />} />
 
           {/* Page 404 */}
           <Route path="*" element={<div>404 Not Found</div>} />

@@ -116,24 +116,19 @@ public class SondageServiceImpl implements ISondageService {
             List<User> users = userRepo.findUsersByServiceId(service.getId());
             logger.info("Found {} users in service {}", users.size(), service.getId());
 
-            // Create notification message
             String message = String.format("New sondage '%s' has been assigned to your service '%s'",
                     sondage.getTitre(), service.getName());
 
-            // Create and send notifications to each user
             for (User user : users) {
                 try {
-                    // Create notification entity
-                    NotificationSondage notification = new NotificationSondage();
-                    notification.setRecipient(user);
-                    notification.setMessage(message);
-                    notification.setCreatedAt(LocalDateTime.now());
-                    notification.setRead(false);
+                    // Send notification using username
+                    notificationService.createSondageNotification(
+                            user.getUsername(),
+                            message,
+                            "sondage-assignment",
+                            sondage.getId()
+                    );
 
-                    // Save and send notification
-                    notificationService.createNotification(notification);
-
-                    // Log successful notification
                     logger.info("Notification sent to user {} about sondage {}",
                             user.getUsername(), sondage.getId());
                 } catch (Exception e) {

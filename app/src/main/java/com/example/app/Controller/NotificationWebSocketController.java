@@ -32,10 +32,10 @@ public class NotificationWebSocketController {
     public void markNotificationAsRead(@Payload Long notificationId, Principal principal) {
         notificationService.markAsRead(notificationId);
 
-        // Notify client that notification was marked as read
-        User user = (User) ((UsernamePasswordAuthenticationToken) principal).getPrincipal();
+        // Get username directly from principal
+        String username = principal.getName();
         messagingTemplate.convertAndSendToUser(
-                user.getUsername(),
+                username,
                 "/queue/notifications-update",
                 Map.of("type", "marked-read", "notificationId", notificationId)
         );
@@ -43,12 +43,11 @@ public class NotificationWebSocketController {
 
     @MessageMapping("/notifications.mark-all-read")
     public void markAllNotificationsAsRead(Principal principal) {
-        User user = (User) ((UsernamePasswordAuthenticationToken) principal).getPrincipal();
-        notificationService.markAllAsRead(user.getId());
+        String username = principal.getName();
+        notificationService.markAllAsRead(username);
 
-        // Notify client that all notifications were marked as read
         messagingTemplate.convertAndSendToUser(
-                user.getUsername(),
+                username,
                 "/queue/notifications-update",
                 Map.of("type", "marked-all-read")
         );
@@ -56,7 +55,7 @@ public class NotificationWebSocketController {
 
     @SubscribeMapping("/user/queue/notifications")
     public List<NotificationSondage> getInitialNotifications(Principal principal) {
-        User user = (User) ((UsernamePasswordAuthenticationToken) principal).getPrincipal();
-        return notificationService.getUnreadNotifications(user.getId());
+        String username = principal.getName();
+        return notificationService.getUnreadNotifications(username);
     }
 }

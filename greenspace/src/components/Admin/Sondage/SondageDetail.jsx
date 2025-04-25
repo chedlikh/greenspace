@@ -1,5 +1,5 @@
 // src/components/Admin/Sondage/SondageDetail.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   useSondageById,
@@ -8,27 +8,14 @@ import {
   useDeleteSondage,
   useAssignServiceToSondage,
   useUnassignServiceFromSondage,
-  useServices,
+  useGservices,
 } from "../../../services/hooks";
 
 const SondageDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const sondageId = parseInt(id);
-  const renderCount = useRef(0);
 
-  // Log renders with context
-  useEffect(() => {
-    renderCount.current += 1;
-    console.log(
-      `SondageDetail rendered ${renderCount.current} times, sondage:`,
-      sondage?.titre,
-      "assignedServices:",
-      assignedServices?.length
-    );
-  });
-
-  // Hooks called at top level
   const {
     data: sondage,
     isLoading: sondageLoading,
@@ -43,7 +30,7 @@ const SondageDetail = () => {
     error: servicesErrorMessage,
   } = useServicesBySondageId(sondageId);
 
-  const { data: allServices, isLoading: allServicesLoading } = useServices();
+  const { data: allServices, isLoading: allServicesLoading } = useGservices();
 
   const updateSondage = useUpdateSondage(sondageId);
   const deleteSondage = useDeleteSondage(sondageId);
@@ -59,26 +46,13 @@ const SondageDetail = () => {
   });
   const [selectedServiceId, setSelectedServiceId] = useState("");
 
-  // Optimize formData updates to prevent unnecessary renders
   useEffect(() => {
     if (sondage) {
-      setFormData((prev) => {
-        if (
-          prev.titre === sondage.titre &&
-          prev.description === sondage.description &&
-          prev.startDate === sondage.startDate &&
-          prev.endDate === sondage.endDate
-        ) {
-          console.log("Skipping formData update: no changes");
-          return prev;
-        }
-        console.log("Updating formData with new sondage data");
-        return {
-          titre: sondage.titre,
-          description: sondage.description,
-          startDate: sondage.startDate,
-          endDate: sondage.endDate,
-        };
+      setFormData({
+        titre: sondage.titre,
+        description: sondage.description,
+        startDate: sondage.startDate,
+        endDate: sondage.endDate,
       });
     }
   }, [sondage]);
@@ -115,7 +89,6 @@ const SondageDetail = () => {
 
   const handleAssignService = () => {
     if (selectedServiceId) {
-      console.log(`Assigning service ${selectedServiceId} to sondage ${sondageId}`);
       assignService.mutate({ serviceId: parseInt(selectedServiceId) });
       setSelectedServiceId("");
     }
@@ -123,7 +96,6 @@ const SondageDetail = () => {
 
   const handleUnassignService = (serviceId) => {
     if (window.confirm("Are you sure you want to remove this service from the sondage?")) {
-      console.log(`Unassigning service ${serviceId} from sondage ${sondageId}`);
       unassignService.mutate({ serviceId });
     }
   };

@@ -7,11 +7,15 @@ import com.example.app.Service.AuthenticationService;
 import com.example.app.Service.JwtService;
 import com.example.app.Service.UserService;
 import com.example.app.configuration.CustomLogoutHandler;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -107,6 +111,61 @@ public class UserRestController {
         User user = userRepo.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(user);
     }
+    @GetMapping("/validate-token")
+    public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String authHeader) {
+        // Check if Authorization header is present and properly formatted
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "valid", false,
+                            "error", "Authorization header missing or invalid"
+                    ));
+        }
+
+        String token = authHeader.substring(7); // Remove "Bearer " prefix
+
+        try {
+            // Validate the token using your existing JwtService
+            String username = jwtService.extractUsername(token);
+            User user = userService.getUserByUsername(username);
+
+            if (!jwtService.isTokenValid(token, user)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(
+                                "valid", false,
+                                "error", "Invalid token"
+                        ));
+            }
+
+            // If valid, return success response with basic info
+            return ResponseEntity.ok(Map.of(
+                    "valid", true,
+                    "username", username,
+                    "roles", user.getRoles(),
+                    "expires_in", jwtService.getExpirationTime(token) - System.currentTimeMillis()
+            ));
+
+        } catch (ExpiredJwtException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "valid", false,
+                            "error", "Token expired"
+                    ));
+        } catch (SignatureException | MalformedJwtException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "valid", false,
+                            "error", "Invalid token signature"
+                    ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "valid", false,
+                            "error", "Token validation failed"
+                    ));
+        }
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<String> logout(@RequestHeader("Authorization") String authHeader,
                                          HttpServletRequest request, HttpServletResponse response) {
@@ -168,8 +227,93 @@ public class UserRestController {
         }
     }
 
+    @GetMapping("/{username}/status")
+    public ResponseEntity<Map<String, Boolean>> getUserStatus(@PathVariable String username) {
+        User user = userService.getUserByUsername(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of("isConnect", user.getConnect()));
+    }
 
+    @PutMapping("/{username}/status")
+    public ResponseEntity<?> updateUserStatus(
+            @PathVariable String username,
+            @RequestParam Boolean isConnect,
+            @RequestHeader("Authorization") String authHeader,
+            Authentication authentication) {
 
+        // Verify the requesting user has permission to update this status
+        String token = authHeader.substring(7); // Remove "Bearer " prefix
+        String requestingUsername = jwtService.extractUsername(token);
+
+        // Get the user whose status is being updated
+        User targetUser = userService.getUserByUsername(username);
+        if (targetUser == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Get the requesting user
+        User requestingUser = userService.getUserByUsername(requestingUsername);
+
+        // Check if the requesting user is the same as the target user or an admin
+        boolean isAdmin = requestingUser.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!requestingUsername.equals(username) && !isAdmin) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "You don't have permission to update this user's status"));
+        }
+
+        // Update the status
+        targetUser.setConnect(isConnect);
+        userRepo.save(targetUser);
+
+        // Update last active date if coming online
+        if (isConnect) {
+            targetUser.setActiveDate(java.time.LocalDate.now());
+            userRepo.save(targetUser);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "username", username,
+                "isConnect", isConnect,
+                "updatedAt", java.time.LocalDateTime.now().toString()
+        ));
+    }
+
+    @GetMapping("/me/status")
+    public ResponseEntity<Map<String, Boolean>> getMyStatus(Authentication authentication) {
+        String username = authentication.getName();
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(Map.of("isConnect", user.getConnect()));
+    }
+
+    @PutMapping("/me/status")
+    public ResponseEntity<?> updateMyStatus(
+            @RequestParam Boolean isConnect,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setConnect(isConnect);
+
+        // Update last active date if coming online
+        if (isConnect) {
+            user.setActiveDate(java.time.LocalDate.now());
+        }
+
+        userRepo.save(user);
+
+        return ResponseEntity.ok(Map.of(
+                "username", username,
+                "isConnect", isConnect,
+                "updatedAt", java.time.LocalDateTime.now().toString()
+        ));
+    }
 
 
 }

@@ -9,7 +9,7 @@ import {
   useUnassignServiceFromPoste,
   useUnassignUsersFromPoste,
   useAssignUsersToPoste,
-  useServices,
+  useGservices,
   useUsersByPosteId,
   useUsers
 } from "../../../services/hooks";
@@ -34,7 +34,7 @@ const PosteDetail = () => {
     error: servicesErrorMessage,
   } = useServicesByPosteId(posteId);
 
-  const { data: allServices, isLoading: allServicesLoading } = useServices();
+  const { data: allServices, isLoading: allServicesLoading } = useGservices();
   const { usersQuery } = useUsers();
   const {
     data: assignedUsers,

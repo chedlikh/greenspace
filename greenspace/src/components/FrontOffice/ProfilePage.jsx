@@ -1,7 +1,8 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { 
   uploadProfilePhoto, 
   uploadCoverPhoto,
@@ -14,8 +15,10 @@ import {
   fetchMediaWithAuth,
   getStoryMediaUrl,
 } from '../../services/storyService';
-import { Link } from 'react-router-dom';
-import { Mail, MapPin, Briefcase, User, Users, Calendar, Phone, Globe, Home, Camera, Edit, X, Plus, Video, Image } from 'feather-icons-react';
+import { Mail, MapPin, Briefcase, User, Users, Calendar, Phone, Globe, Home, Camera, Edit, X, Plus } from 'feather-icons-react';
+import CreatePublicationForm from './Publication/CreatePublicationForm'; // Import from previous response
+import UserProfilePublications from './Publication/UserProfilePublications'; // Import from previous response
+import { toast } from 'react-toastify';
 
 const ProfilePage = () => {
   const { username: urlUsername } = useParams();
@@ -141,6 +144,10 @@ const ProfilePage = () => {
       queryClient.invalidateQueries(['userDetails', profileUsername]);
       queryClient.invalidateQueries(['currentUser', token]);
       setProfilePhotoPreview(null);
+      toast.success('Profile photo updated successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to update profile photo: ${error.message}`);
     }
   });
 
@@ -149,6 +156,10 @@ const ProfilePage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['userDetails', profileUsername]);
       queryClient.invalidateQueries(['currentUser', token]);
+      toast.success('Cover photo updated successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to update cover photo: ${error.message}`);
     }
   });
 
@@ -191,6 +202,7 @@ const ProfilePage = () => {
     try {
       if (!token) {
         console.error("Authentication token missing");
+        toast.error('Please log in to create a story');
         return;
       }
       
@@ -206,18 +218,19 @@ const ProfilePage = () => {
       setShowStoryModal(false);
       
       queryClient.invalidateQueries(['user-stories', profileUsername]);
+      toast.success('Story created successfully');
     } catch (error) {
       console.error("Failed to create story:", error);
       if (error.response) {
         if (error.response.status === 401) {
-          alert("Your session has expired. Please log in again.");
+          toast.error("Your session has expired. Please log in again.");
         } else {
-          alert(`Server error: ${error.response.status}. Please try again later.`);
+          toast.error(`Server error: ${error.response.status}. Please try again later.`);
         }
       } else if (error.request) {
-        alert("Network error. Please check your connection and try again.");
+        toast.error("Network error. Please check your connection and try again.");
       } else {
-        alert("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
       }
     }
   };
@@ -279,14 +292,8 @@ const ProfilePage = () => {
     );
   }
 
-  // Base URL for images
-
-  
-  
-
-  const imageBaseUrl = 'http://greenspace.ddns.net:8089/images/';
+  const imageBaseUrl = 'http://localhost:8089/images/';
   const hasActiveStories = userStories.length > 0;
-
 
   return (
     <div className="main-content bg-gray-50 min-h-screen">
@@ -394,15 +401,15 @@ const ProfilePage = () => {
             <div className="flex justify-between mt-2">
               <div className="flex space-x-4">
                 <div className="text-center">
-                  <span className="block font-bold text-gray-900"style={{ marginTop: "-50px", marginLeft: "25px" }}>456</span>
-                  <span className="text-xs text-gray-500"style={{ marginLeft: "25px" }}>Posts</span>
+                  <span className="block font-bold text-gray-900" style={{ marginTop: "-50px", marginLeft: "25px" }}>456</span>
+                  <span className="text-xs text-gray-500" style={{ marginLeft: "25px" }}>Posts</span>
                 </div>
                 <div className="text-center">
-                  <span className="block font-bold text-gray-900"style={{ marginTop: "-50px" }}>2.1k</span>
+                  <span className="block font-bold text-gray-900" style={{ marginTop: "-50px" }}>2.1k</span>
                   <span className="text-xs text-gray-500">Followers</span>
                 </div>
                 <div className="text-center">
-                  <span className="block font-bold text-gray-900"style={{ marginTop: "-50px" }}>32k</span>
+                  <span className="block font-bold text-gray-900" style={{ marginTop: "-50px" }}>32k</span>
                   <span className="text-xs text-gray-500">Following</span>
                 </div>
               </div>
@@ -410,13 +417,13 @@ const ProfilePage = () => {
               <div className="w-32"></div>
               
               <div className="flex space-x-2">
-                <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center"style={{ marginTop: "-50px" }}>
+                <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center" style={{ marginTop: "-50px" }}>
                   <Mail size={16} className="inline mr-1" style={{ marginTop: "-0px" }} /> Message
                 </button>
-                <button className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center"style={{ marginTop: "-50px",marginRight: "25px"  }}>
+                <button className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center" style={{ marginTop: "-50px", marginRight: "25px" }}>
                   {user.isConnect ? 
-                    <span className="flex items-center"><span className="h-2 w-2 bg-green-500 rounded-full mr-2"style={{ marginTop: "-0px" }}></span>Online</span> : 
-                    <span className="flex items-center"><span className="h-2 w-2 bg-gray-400 rounded-full mr-2"style={{ marginTop: "-0px" }}></span>Offline</span>
+                    <span className="flex items-center"><span className="h-2 w-2 bg-green-500 rounded-full mr-2" style={{ marginTop: "-0px" }}></span>Online</span> : 
+                    <span className="flex items-center"><span className="h-2 w-2 bg-gray-400 rounded-full mr-2" style={{ marginTop: "-0px" }}></span>Offline</span>
                   }
                 </button>
               </div>
@@ -424,14 +431,14 @@ const ProfilePage = () => {
             
             {/* User Info */}
             <div className="pt-16 mt-4">
-              <div className="text-center"style={{ marginTop: "-100px" }}>
+              <div className="text-center" style={{ marginTop: "-100px" }}>
                 <h1 className="text-2xl font-bold text-gray-900">{user.firstname} {user.lastName}</h1>
                 <p className="text-sm text-gray-600">@{user.username}</p>
               </div>
             </div>
             
             {/* Navigation Tabs */}
-            <div className="px-6 border-t border-gray-100"style={{ marginTop: "-50px" }} >
+            <div className="px-6 border-t border-gray-100" style={{ marginTop: "-50px" }}>
               <nav className="flex overflow-x-auto">
                 <Link to="#about" className="px-4 py-3 font-medium text-blue-600 border-b-2 border-blue-600 whitespace-nowrap">
                   About
@@ -546,111 +553,15 @@ const ProfilePage = () => {
           {/* Main Content Area */}
           <div className="lg:col-span-2">
             {isCurrentUser && (
-              <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-                <div className="flex items-center mb-4">
-                  <img 
-                    src={user.photoProfile ? `${imageBaseUrl + user.photoProfile}` : "/images/default-profile.png"}
-                    alt="Profile"
-                    className="h-10 w-10 rounded-full mr-3"
-                  />
-                  <div className="flex-1">
-                    <input 
-                      type="text" 
-                      placeholder="What's on your mind?" 
-                      className="w-full px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div className="flex border-t pt-3">
-                  <button className="flex-1 flex items-center justify-center py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">
-                    <svg className="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                    </svg>
-                    Live Video
-                  </button>
-                  <button className="flex-1 flex items-center justify-center py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">
-                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    Photo/Video
-                  </button>
-                  <button className="flex-1 flex items-center justify-center py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">
-                    <svg className="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    Feeling/Activity
-                  </button>
-                </div>
-              </div>
+              <CreatePublicationForm
+                onSuccess={() => {
+                  queryClient.invalidateQueries(['userPublications', profileUsername]);
+                }}
+              />
             )}
             
-            {/* Sample Post */}
-            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-              <div className="flex items-center mb-4">
-                <img 
-                  src={user.photoProfile ? `${imageBaseUrl + user.photoProfile}` : "/images/default-profile.png"}
-                  alt="Profile"
-                  className="h-10 w-10 rounded-full mr-3"
-                />
-                <div>
-                  <h3 className="font-medium text-gray-900">{user.firstname} {user.lastName}</h3>
-                  <p className="text-xs text-gray-500">{new Date().toLocaleDateString()}</p>
-                </div>
-              </div>
-              <div className="mb-4">
-                <p className="text-gray-700">
-                  Welcome to my profile! I'm excited to connect with you all.
-                </p>
-              </div>
-              <div className="rounded-lg overflow-hidden mb-4">
-                <img src="/images/post-1.jpg" alt="Post" className="w-full h-auto" />
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <div className="flex items-center">
-                  <span className="bg-blue-100 p-1 rounded-full mr-1">
-                    <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z"></path>
-                    </svg>
-                  </span>
-                  <span className="text-sm text-gray-500">24 Likes</span>
-                </div>
-                <div className="text-sm text-gray-500">8 Comments</div>
-              </div>
-              <div className="border-t border-b py-2 mb-3">
-                <div className="flex justify-around">
-                  <button className="flex items-center text-gray-600 hover:text-blue-600">
-                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
-                    </svg>
-                    Like
-                  </button>
-                  <button className="flex items-center text-gray-600 hover:text-blue-600">
-                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                    </svg>
-                    Comment
-                  </button>
-                  <button className="flex items-center text-gray-600 hover:text-blue-600">
-                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
-                    </svg>
-                    Share
-                  </button>
-                </div>
-              </div>
-              <div className="flex">
-                <img 
-                  src={user.photoProfile ? `${imageBaseUrl + user.photoProfile}` : "/images/default-profile.png"}
-                  alt="Profile"
-                  className="h-8 w-8 rounded-full mr-2"
-                />
-                <input 
-                  type="text" 
-                  placeholder="Write a comment..." 
-                  className="flex-1 bg-gray-100 rounded-full px-4 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
+            {/* User Posts */}
+            <UserProfilePublications username={profileUsername} />
           </div>
         </div>
       </div>
@@ -773,7 +684,7 @@ const ProfilePage = () => {
       
       {/* Story Viewer Modal */}
       {showStoryViewer && userStories.length > 0 && (
-        <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black flex items-center justify-center z-50" style={{ marginTop: "80px", marginBottom: "40px" }}>
           {/* Close button */}
           <button 
             onClick={() => {
