@@ -38,56 +38,60 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(request -> {
-                    var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-                    corsConfig.setAllowedOrigins(List.of("http://localhost:5173"));
-                    corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    corsConfig.setAllowedHeaders(List.of("*"));
-                    corsConfig.setExposedHeaders(List.of("Authorization"));
-                    corsConfig.setAllowCredentials(true);
-                    corsConfig.setMaxAge(3600L);
-                    return corsConfig;
-                }))
-                .authorizeHttpRequests(req -> req
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests
-                        .requestMatchers(
-                                "/login/**",
-                                "/create/**",
-                                "/refresh_token/**",
-                                "/Site/**",
-                                "/api/societes**",
-                                "/api/gservices/**",
-                                "/images/{filename:.+}",
-                                "/ws-notifications/**",
-                                "/app/**",
-                                "/ws/**",
-                                "/topic/**"
-                        ).permitAll()
-                        .requestMatchers("/admin_only/**").hasAuthority("ADMIN")
-                        .anyRequest().authenticated()
-                )
-                .userDetailsService(userDetailsServiceImp)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(e -> e
-                        .accessDeniedHandler((request, response, accessDeniedException) ->
-                                response.setStatus(HttpStatus.FORBIDDEN.value())
-                        )
-                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-                )
-                .logout(l -> l
-                        .logoutUrl("/logout")
-                        .addLogoutHandler(logoutHandler)
-                        .logoutSuccessHandler((request, response, authentication) ->
-                                SecurityContextHolder.clearContext()
-                        )
-                )
-                .build();
-    }
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    return http
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(request -> {
+                var corsConfig = new org.springframework.web.cors.CorsConfiguration();
+                corsConfig.setAllowedOrigins(List.of(
+                    "http://localhost:3000",
+                    "http://192.168.0.187:3000",
+                    "http://greenspace.ddns.net:3000",
+                    "http://41.227.206.228:3000"
+                ));
+                corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                corsConfig.setAllowedHeaders(List.of("*"));
+                corsConfig.setExposedHeaders(List.of("Authorization"));
+                corsConfig.setAllowCredentials(true);
+                corsConfig.setMaxAge(3600L);
+                return corsConfig;
+            }))
+            .authorizeHttpRequests(req -> req
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers(
+                            "/login/**",
+                            "/create/**",
+                            "/refresh_token/**",
+                            "/Site/**",
+                            "/api/societes**",
+                            "/api/gservices/**",
+                            "/images/{filename:.+}",
+                            "/ws-notifications/**",
+                            "/app/**",
+                            "/ws/**",
+                            "/topic/**"
+                    ).permitAll()
+                    .requestMatchers("/admin_only/**").hasAuthority("ADMIN")
+                    .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(e -> e
+                    .accessDeniedHandler((request, response, accessDeniedException) ->
+                            response.setStatus(HttpStatus.FORBIDDEN.value())
+                    )
+                    .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            )
+            .logout(l -> l
+                    .logoutUrl("/logout")
+                    .addLogoutHandler(logoutHandler)
+                    .logoutSuccessHandler((request, response, authentication) ->
+                            SecurityContextHolder.clearContext()
+                    )
+            )
+            .build();
+}
 
     @Bean
     public PasswordEncoder passwordEncoder() {
