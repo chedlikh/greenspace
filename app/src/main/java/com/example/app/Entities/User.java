@@ -291,8 +291,5 @@ public class User implements UserDetails {
         this.poste = poste;
     }
 
-    public List<Story> getStories() {
-        return stories;
-    }
 
 }

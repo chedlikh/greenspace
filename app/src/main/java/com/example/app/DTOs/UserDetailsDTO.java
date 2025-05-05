@@ -2,12 +2,14 @@ package com.example.app.DTOs;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class UserDetailsDTO extends UserDTO {
     private String email;
