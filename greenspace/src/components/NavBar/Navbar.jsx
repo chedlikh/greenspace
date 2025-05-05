@@ -8,6 +8,8 @@ import { useNotificationSubscription, useNotificationActions } from '../../servi
 import { format } from 'date-fns';
 import NotificationList from '../Notification/NotificationList';
 import './Navbar.css';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+
 
 const Navbar = () => {
   const dispatch = useDispatch();
@@ -133,8 +135,8 @@ const Navbar = () => {
                 <Dropdown.Toggle as="div" id="dropdown-profile" className="profile-toggle">
                   <img
 
-                    src={user.photoProfile ? `http://localhost:8089/images/${user.photoProfile}` : "images/default-user.png"}
-                    alt="Profile"
+src={user.photoProfile ? `${API_BASE_URL}/images/${user.photoProfile}` : "images/default-user.png"}
+alt="Profile"
                     className="profile-image"
                   />
                 </Dropdown.Toggle>

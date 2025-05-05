@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUsers } from "../../services/hooks";
 import { Search, UserPlus, Users } from "lucide-react";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+
 
 const ListUsers = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,8 +88,8 @@ const ListUsers = () => {
                   {/* Profile Picture */}
                   <div className="relative inline-block mb-4">
                     <img
-                      src={user.photoProfile ? `http://localhost:8089/images/${user.photoProfile}` : "images/default-user.png"}
-                      alt="user"
+                    src={user.photoProfile ? `${API_BASE_URL}/images/${user.photoProfile}` : "images/default-user.png"}
+                    alt="user"
                       className="w-24 h-24 rounded-full border-4 border-gray-200 object-cover"
                     />
                     <span

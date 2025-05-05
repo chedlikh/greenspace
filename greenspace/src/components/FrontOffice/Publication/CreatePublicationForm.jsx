@@ -10,8 +10,8 @@ import { toast } from 'react-toastify';
 import LoadingSpinner from './../LoadingSpinner';
 
 const CreatePublicationForm = ({ targetUsername, groupId, onSuccess }) => {
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8089';
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+    const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
   const { mutate: createPublication, isPending: isCreating } = useCreatePublication();
   const { mutate: createCrossUserPublication, isPending: isCreatingCross } = useCreateCrossUserPublication();
   const { mutate: createGroupPublication, isPending: isCreatingGroup } = useCreateGroupPublication();

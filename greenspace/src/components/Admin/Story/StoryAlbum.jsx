@@ -9,7 +9,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useSelector } from "react-redux";
 
-const API_BASE_URL = 'http://192.168.0.187:8089';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
 
 const AuthMedia = ({ src, alt, className, type = 'IMAGE', ...props }) => {
   const [objectUrl, setObjectUrl] = useState(null);

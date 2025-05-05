@@ -287,8 +287,8 @@ const ProfilePage = () => {
       </div>
     );
   }
-
-  const imageBaseUrl = 'http://localhost:8089/images/';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+  const imageBaseUrl = `${API_BASE_URL}/images/`;
   const hasActiveStories = userStories.length > 0;
 
   return (

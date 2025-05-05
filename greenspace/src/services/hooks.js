@@ -5,8 +5,7 @@ import { debounce } from 'lodash';
 import { toast } from 'react-toastify';
 
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8089";
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
 // logoutapi
 export const logoutUser = async (token) => {
   const response = await fetch(`${API_BASE_URL}/logout`, {

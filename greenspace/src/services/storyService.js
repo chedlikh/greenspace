@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8089";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
 
 // Fetch all stories
 export const fetchStories = async (token) => {
@@ -191,9 +191,9 @@ export const getStoryMediaUrl = (filename, token) => {
   };
 };
 
-export const getprofileMediaUrl = (filename, token) => {
+export const getProfileMediaUrl = (filename, token) => {
   return {
-    url: `http://localhost:8089/images/${filename}`,
+    url: `${API_BASE_URL}/images/${filename}`,
     token: token
   };
 };

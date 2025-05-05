@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'; // Use React Query for fetchin
 import Navbar from '../NavBar/Navbar';
 import NavLeft from '../NavBar/NavLeft';
 import { fetchUserDetails } from '../../services/hooks'; // Import the fetchUserDetails function
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+
 
 const MyInfo = () => {
   const dispatch = useDispatch();
@@ -49,8 +51,8 @@ const MyInfo = () => {
                 <div className="col-lg-4 text-center">
                   <figure className="avatar ms-auto me-auto mb-0 mt-2 w100">
                   <img
-                     src={user.photoProfile ? `http://localhost:8089/images/${user.photoProfile}` : "images/default-user.png"}
-                     alt="user"
+                    src={user.photoProfile ? `${API_BASE_URL}/images/${user.photoProfile}` : "images/default-user.png"}
+                    alt="user"
                      className="rounded-circle border shadow"
                      width="120"
                      height="120"

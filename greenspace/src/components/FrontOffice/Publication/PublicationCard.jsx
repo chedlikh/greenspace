@@ -10,7 +10,6 @@ import { useUpdatePublication } from '../../../services/publications';
 
 const PublicationCard = ({ publication, group }) => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
-
   // Debug logging: Log the entire publication and group props
   console.log('PublicationCard props:', { publication, group });
 

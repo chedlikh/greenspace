@@ -11,8 +11,8 @@ import {
   setNotificationsError
 } from '../features/notificationSlice';
 
-const SOCKET_URL = 'http://localhost:8089/ws';
-const API_BASE_URL = 'http://localhost:8089';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+const SOCKET_URL = `${API_BASE_URL}/ws`;
 
 // Global Set to track processed notification IDs
 const processedNotifications = new Set();

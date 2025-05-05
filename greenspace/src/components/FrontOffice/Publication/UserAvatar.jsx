@@ -9,8 +9,7 @@ const UserAvatar = ({ user, size = 'md' }) => {
     xl: 'h-16 w-16',
   };
 
-  const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8089';
-
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
   // Use user prop directly, fallback to defaults if fields are missing
   const fullName = user?.firstname || user?.lastName
     ? `${user.firstname || ''} ${user.lastName || ''}`.trim()

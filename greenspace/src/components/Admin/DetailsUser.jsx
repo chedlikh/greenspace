@@ -7,6 +7,8 @@ import {
   useDeleteUser,
   useAssignRolesToUser,
 } from "../../services/hooks";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+
 
 const DetailsUser = () => {
   const { username } = useParams();
@@ -177,7 +179,7 @@ const DetailsUser = () => {
               <div className="flex flex-col items-center">
                 <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden mb-4">
                   <img
-                    src={user.photoProfile ? `http://greenspace.ddns.net:8089/images/${user.photoProfile}` : "images/default-user.png"}
+                    src={user.photoProfile ? `${API_BASE_URL}/images/${user.photoProfile}` : "images/default-user.png"}
                     alt="user"
                     className="w-full h-full object-cover"
                   />
