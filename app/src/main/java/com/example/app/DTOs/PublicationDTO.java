@@ -25,6 +25,32 @@ public class PublicationDTO {
     private List<CommentDTO> comments;
     private List<MediaDTO> mediaItems;
     private Map<Reaction.ReactionType, Long> reactionCounts;
+    private UserDTO targetUser;
+    private GroupDTO group;
+
+    public Boolean getEdited() {
+        return isEdited;
+    }
+
+    public void setEdited(Boolean edited) {
+        isEdited = edited;
+    }
+
+    public GroupDTO getGroup() {
+        return group;
+    }
+
+    public void setGroup(GroupDTO group) {
+        this.group = group;
+    }
+
+    public UserDTO getTargetUser() {
+        return targetUser;
+    }
+
+    public void setTargetUser(UserDTO targetUser) {
+        this.targetUser = targetUser;
+    }
 
     public Long getId() {
         return id;

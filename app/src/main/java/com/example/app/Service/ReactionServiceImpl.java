@@ -2,7 +2,6 @@ package com.example.app.Service;
 
 import com.example.app.Entities.Reaction;
 import com.example.app.Repository.ReactionRepository;
-import com.example.app.Service.IReactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -105,5 +104,10 @@ public class ReactionServiceImpl implements IReactionService {
     @Override
     public long countTotalReactionsByCommentId(Long commentId) {
         return reactionRepository.countByCommentId(commentId);
+    }
+
+    @Override
+    public long countByGroupIdAndUserId(Long groupId, Long userId) {
+        return reactionRepository.countByGroupIdAndUserId(groupId, userId);
     }
 }

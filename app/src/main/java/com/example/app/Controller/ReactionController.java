@@ -17,7 +17,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reactions")
@@ -100,15 +103,17 @@ public class ReactionController {
     }
 
     @GetMapping("/publication/{publicationId}/user")
-    public ResponseEntity<ReactionDTO> getUserReactionForPublication(
+    public ResponseEntity<?> getUserReactionForPublication(
             @PathVariable Long publicationId) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
 
-        return reactionService.findByUserIdAndPublicationId(currentUser.getId(), publicationId)
-                .map(reaction -> new ResponseEntity<>(reactionMapper.toDto(reaction), HttpStatus.OK))
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        Optional<Reaction> reaction = reactionService.findByUserIdAndPublicationId(currentUser.getId(), publicationId);
+
+        // Return 200 OK with empty body when no reaction exists
+        return reaction.map(value -> new ResponseEntity<>(reactionMapper.toDto(value), HttpStatus.OK))
+                .orElseGet(() -> ResponseEntity.ok().build());
     }
 
     @GetMapping("/comment/{commentId}/user")
@@ -137,5 +142,35 @@ public class ReactionController {
 
         reactionService.deleteReaction(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @GetMapping("/publication/{publicationId}")
+    public ResponseEntity<List<ReactionDTO>> getReactionsByPublicationId(
+            @PathVariable Long publicationId) {
+
+        publicationService.findById(publicationId)
+                .orElseThrow(() -> new EntityNotFoundException("Publication not found with id: " + publicationId));
+
+        List<Reaction> reactions = reactionService.findByPublicationId(publicationId);
+        List<ReactionDTO> reactionDTOs = reactions.stream()
+                .map(reactionMapper::toDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(reactionDTOs);
+    }
+
+    @GetMapping("/comment/{commentId}")
+    public ResponseEntity<List<ReactionDTO>> getReactionsByCommentId(
+            @PathVariable Long commentId) {
+
+        commentService.findById(commentId)
+                .orElseThrow(() -> new EntityNotFoundException("Comment not found with id: " + commentId));
+
+        List<Reaction> reactions = reactionService.findByCommentId(commentId);
+        List<ReactionDTO> reactionDTOs = reactions.stream()
+                .map(reactionMapper::toDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(reactionDTOs);
     }
 }

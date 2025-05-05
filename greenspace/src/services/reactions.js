@@ -20,6 +20,9 @@ const reactToPublication = async ({ publicationId, reactionType, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 403) {
+      throw new Error('You do not have permission to react to this publication');
+    }
     throw new Error(errorData.message || 'Failed to react to publication');
   }
 
@@ -43,6 +46,9 @@ const reactToComment = async ({ commentId, reactionType, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 403) {
+      throw new Error('You do not have permission to react to this comment');
+    }
     throw new Error(errorData.message || 'Failed to react to comment');
   }
 
@@ -98,16 +104,13 @@ const getUserPublicationReaction = async ({ publicationId, token }) => {
     },
   });
 
-  if (!response.ok && response.status !== 404) {
+  if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || 'Failed to get user reaction');
   }
 
-  if (response.status === 404) {
-    return null;
-  }
-
-  return response.json();
+  const data = await response.json();
+  return data.exists ? data.reaction : null;
 };
 
 // Get user reaction for comment
@@ -133,6 +136,44 @@ const getUserCommentReaction = async ({ commentId, token }) => {
   return response.json();
 };
 
+// Get all reactions for publication
+const getPublicationReactions = async ({ publicationId, token }) => {
+  if (!token) throw new Error("No token provided");
+  if (!publicationId) throw new Error("No publicationId provided");
+
+  const response = await fetch(`${API_BASE_URL}/api/reactions/publication/${publicationId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to get publication reactions');
+  }
+
+  return response.json();
+};
+
+// Get all reactions for comment
+const getCommentReactions = async ({ commentId, token }) => {
+  if (!token) throw new Error("No token provided");
+  if (!commentId) throw new Error("No commentId provided");
+
+  const response = await fetch(`${API_BASE_URL}/api/reactions/comment/${commentId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to get comment reactions');
+  }
+
+  return response.json();
+};
+
 // Delete reaction
 const deleteReaction = async ({ id, publicationId, commentId, token }) => {
   if (!token) throw new Error("No token provided");
@@ -147,10 +188,12 @@ const deleteReaction = async ({ id, publicationId, commentId, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 403) {
+      throw new Error('You do not have permission to delete this reaction');
+    }
     throw new Error(errorData.message || 'Failed to delete reaction');
   }
 
-  // Return provided IDs since the API returns no body
   return { publicationId, commentId };
 };
 
@@ -164,6 +207,7 @@ export const useReactToPublication = () => {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['publicationReactionCounts', variables.publicationId]);
       queryClient.invalidateQueries(['userPublicationReaction', variables.publicationId]);
+      queryClient.invalidateQueries(['publicationReactions', variables.publicationId]);
       queryClient.invalidateQueries(['publication', variables.publicationId]);
     },
   });
@@ -178,6 +222,7 @@ export const useReactToComment = () => {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries(['commentReactionCounts', variables.commentId]);
       queryClient.invalidateQueries(['userCommentReaction', variables.commentId]);
+      queryClient.invalidateQueries(['commentReactions', variables.commentId]);
     },
   });
 };
@@ -189,6 +234,9 @@ export const usePublicationReactionCounts = (publicationId) => {
     queryKey: ['publicationReactionCounts', publicationId],
     queryFn: () => getPublicationReactionCounts({ publicationId, token }),
     enabled: !!publicationId && !!token,
+    select: (data) => ({
+      counts: data.counts,
+    }),
   });
 };
 
@@ -199,6 +247,9 @@ export const useCommentReactionCounts = (commentId) => {
     queryKey: ['commentReactionCounts', commentId],
     queryFn: () => getCommentReactionCounts({ commentId, token }),
     enabled: !!commentId && !!token,
+    select: (data) => ({
+      counts: data.counts,
+    }),
   });
 };
 
@@ -209,6 +260,18 @@ export const useUserPublicationReaction = (publicationId) => {
     queryKey: ['userPublicationReaction', publicationId],
     queryFn: () => getUserPublicationReaction({ publicationId, token }),
     enabled: !!publicationId && !!token,
+    select: (data) => {
+      if (!data) return null;
+      return {
+        id: data.id,
+        reactionType: data.reactionType,
+        user: {
+          id: data.user?.id,
+          username: data.user?.username,
+        },
+        publicationId: data.publicationId,
+      };
+    },
   });
 };
 
@@ -219,6 +282,58 @@ export const useUserCommentReaction = (commentId) => {
     queryKey: ['userCommentReaction', commentId],
     queryFn: () => getUserCommentReaction({ commentId, token }),
     enabled: !!commentId && !!token,
+    select: (data) =>
+      data
+        ? {
+            id: data.id,
+            reactionType: data.reactionType,
+            user: {
+              id: data.user?.id,
+              username: data.user?.username,
+            },
+            commentId: data.commentId,
+          }
+        : null,
+  });
+};
+
+export const usePublicationReactions = (publicationId) => {
+  const token = useSelector((state) => state.auth.token);
+
+  return useQuery({
+    queryKey: ['publicationReactions', publicationId],
+    queryFn: () => getPublicationReactions({ publicationId, token }),
+    enabled: !!publicationId && !!token,
+    select: (data) =>
+      data.map((reaction) => ({
+        id: reaction.id,
+        reactionType: reaction.reactionType,
+        user: {
+          id: reaction.user?.id,
+          username: reaction.user?.username,
+        },
+        publicationId: reaction.publicationId,
+      })),
+  });
+};
+
+export const useCommentReactions = (commentId) => {
+  const token = useSelector((state) => state.auth.token);
+
+  return useQuery({
+    queryKey: ['commentReactions', commentId],
+    queryFn: () => getCommentReactions({ commentId, token }),
+    enabled: !!commentId && !!token,
+    select: (data) =>
+      data.map((reaction) => ({
+        id: reaction.id,
+        reactionType: reaction.reactionType,
+        user: {
+          id: reaction.user?.id,
+          username: reaction.user?.username,
+        },
+        commentId: reaction.commentId,
+      })),
   });
 };
 
@@ -227,16 +342,19 @@ export const useDeleteReaction = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, publicationId, commentId }) => deleteReaction({ id, publicationId, commentId, token }),
+    mutationFn: ({ id, publicationId, commentId }) =>
+      deleteReaction({ id, publicationId, commentId, token }),
     onSuccess: (data) => {
       if (data.publicationId) {
         queryClient.invalidateQueries(['publicationReactionCounts', data.publicationId]);
         queryClient.invalidateQueries(['userPublicationReaction', data.publicationId]);
+        queryClient.invalidateQueries(['publicationReactions', data.publicationId]);
         queryClient.invalidateQueries(['publication', data.publicationId]);
       }
       if (data.commentId) {
         queryClient.invalidateQueries(['commentReactionCounts', data.commentId]);
         queryClient.invalidateQueries(['userCommentReaction', data.commentId]);
+        queryClient.invalidateQueries(['commentReactions', data.commentId]);
       }
     },
   });

@@ -11,8 +11,8 @@ import {
   setNotificationsError
 } from '../features/notificationSlice';
 
-const SOCKET_URL = 'http://greenspace.ddns.net:8089/ws';
-const API_BASE_URL = 'http://greenspace.ddns.net:8089';
+const SOCKET_URL = 'http://localhost:8089/ws';
+const API_BASE_URL = 'http://localhost:8089';
 
 // Global Set to track processed notification IDs
 const processedNotifications = new Set();

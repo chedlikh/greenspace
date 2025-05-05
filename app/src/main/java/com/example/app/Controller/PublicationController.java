@@ -53,11 +53,15 @@ public class PublicationController {
             @RequestParam(defaultValue = "createDate") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        Long userId = currentUser.getId();
+
         Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-        Page<Publication> publications = publicationService.findAllPaginated(pageable);
+        Page<Publication> publications = publicationService.findAllPaginatedForUser(userId, pageable);
 
         Page<PublicationDTO> dtoPage = publications.map(publicationMapper::toDto);
         return ResponseEntity.ok(dtoPage);
@@ -73,7 +77,6 @@ public class PublicationController {
                 .orElseThrow(() -> new EntityNotFoundException("Publication not found with id: " + id));
     }
 
-    // Changed from userId to username
     @GetMapping("/user/{username}")
     public ResponseEntity<Page<PublicationDTO>> getPublicationsByUsername(
             @PathVariable String username,
@@ -83,10 +86,7 @@ public class PublicationController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createDate"));
 
         try {
-            // Load user by username - this will already throw UsernameNotFoundException if not found
             User user = (User) userService.loadUserByUsername(username);
-
-            // Then find publications by user ID
             Page<Publication> publications = publicationService.findByUserIdPaginated(user.getId(), pageable);
 
             Page<PublicationDTO> dtoPage = publications.map(publicationMapper::toDto);
@@ -147,4 +147,42 @@ public class PublicationController {
         publicationService.deletePublication(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    @PostMapping("/cross-user")
+    public ResponseEntity<PublicationDTO> createCrossUserPublication(@RequestBody CrossUserPublicationDTO publicationDto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+
+        try {
+            User targetUser = (User) userService.loadUserByUsername(publicationDto.getTargetUsername());
+            Publication publication = publicationMapper.toCrossUserEntity(publicationDto);
+            publication.setUser(currentUser);
+            publication.setTargetUser(targetUser);
+
+            Publication savedPublication = publicationService.savePublication(publication);
+            return new ResponseEntity<>(publicationMapper.toDto(savedPublication), HttpStatus.CREATED);
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            throw new EntityNotFoundException("Target user not found with username: " + publicationDto.getTargetUsername());
+        }
+    }
+
+    @GetMapping("/timeline/{username}")
+    public ResponseEntity<Page<PublicationDTO>> getUserTimelinePublications(
+            @PathVariable String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createDate"));
+
+        try {
+            User profileOwner = (User) userService.loadUserByUsername(username);
+            Long profileOwnerId = profileOwner.getId();
+            Page<Publication> publications = publicationService.findUserTimelinePublications(profileOwnerId, pageable);
+            Page<PublicationDTO> dtoPage = publications.map(publicationMapper::toDto);
+            return ResponseEntity.ok(dtoPage);
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            throw new EntityNotFoundException("User not found with username: " + username);
+        }
+    }
+
 }

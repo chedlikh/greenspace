@@ -28,7 +28,6 @@ const CommentItem = ({ comment, isReply = false }) => {
   const user = useSelector((state) => state.auth.user);
   const isCurrentUser = user?.username === comment.user?.username;
 
-  // Construct fullName from firstname and lastName
   const fullName = comment.user 
     ? `${comment.user.firstname || ''} ${comment.user.lastName || ''}`.trim() 
     : 'Anonymous User';
@@ -127,14 +126,14 @@ const CommentItem = ({ comment, isReply = false }) => {
     : 'Unknown time';
 
   return (
-    <div className={`bg-gray-50 rounded-lg p-3 ${isReply ? 'ml-6' : ''}`}>
+    <div className={`bg-gray-100 rounded-xl p-4 ${isReply ? 'ml-6' : ''} transition-all duration-300 hover:shadow-md`}>
       <div className="flex items-start space-x-3">
         <UserAvatar user={comment.user} size="sm" />
         <div className="flex-1">
-          <div className="bg-white rounded-lg p-3 shadow-sm">
+          <div className="bg-white rounded-xl p-4 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
-                <h4 className="font-medium text-gray-900">{fullName}</h4>
+                <h4 className="font-semibold text-gray-900">{fullName}</h4>
                 <p className="text-xs text-gray-500">
                   {formattedDate}
                   {comment.isEdited && <span className="ml-1">· Edited</span>}
@@ -144,22 +143,22 @@ const CommentItem = ({ comment, isReply = false }) => {
                 <div className="relative">
                   <button
                     onClick={() => setShowMenu(!showMenu)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-indigo-600 transition-colors"
                     disabled={isDeleting}
                   >
                     <MoreHorizontal size={16} />
                   </button>
                   {showMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50 border border-gray-200 animate-fadeIn">
                       <button
                         onClick={handleEdit}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
                       >
                         Edit
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
                         disabled={isDeleting}
                       >
                         {isDeleting ? 'Deleting...' : 'Delete'}
@@ -171,25 +170,25 @@ const CommentItem = ({ comment, isReply = false }) => {
             </div>
 
             {isEditing ? (
-              <div className="mt-2">
+              <div className="mt-3">
                 <textarea
                   value={editedContent}
                   onChange={(e) => setEditedContent(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   rows={3}
                   disabled={isUpdating}
                 />
                 <div className="flex justify-end space-x-2 mt-2">
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-3 py-1 text-sm text-gray-700 bg-gray-100 rounded-md"
+                    className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     disabled={isUpdating}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveEdit}
-                    className="px-3 py-1 text-sm text-white bg-indigo-600 rounded-md disabled:opacity-50"
+                    className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     disabled={isUpdating || !editedContent.trim()}
                   >
                     {isUpdating ? 'Saving...' : 'Save'}
@@ -197,21 +196,21 @@ const CommentItem = ({ comment, isReply = false }) => {
                 </div>
               </div>
             ) : (
-              <p className="mt-1 text-gray-800">{comment.content}</p>
+              <p className="mt-2 text-gray-800">{comment.content}</p>
             )}
 
-            <div className="flex items-center mt-2 space-x-4">
+            <div className="flex items-center mt-3 space-x-4">
               <ReactionButtons commentId={comment.id} isComment={true} />
               <button
                 onClick={toggleReplyForm}
-                className="text-sm text-gray-600 hover:text-indigo-600"
+                className="text-sm text-gray-600 hover:text-indigo-600 transition-colors"
               >
                 Reply
               </button>
               {replyCount > 0 && (
                 <button
                   onClick={toggleReplies}
-                  className="text-sm text-gray-600 hover:text-indigo-600"
+                  className="text-sm text-gray-600 hover:text-indigo-600 transition-colors"
                 >
                   {showReplies ? 'Hide replies' : `Show replies (${replyCount})`}
                 </button>
@@ -220,7 +219,7 @@ const CommentItem = ({ comment, isReply = false }) => {
           </div>
 
           {showReplyForm && (
-            <div className="mt-3 ml-6">
+            <div className="mt-4 ml-6">
               <form onSubmit={handleReplySubmit} className="flex items-start space-x-3">
                 <UserAvatar user={user} size="xs" />
                 <div className="flex-1">
@@ -228,7 +227,7 @@ const CommentItem = ({ comment, isReply = false }) => {
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="Write a reply..."
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                     rows={2}
                     disabled={isReplying}
                   />
@@ -236,7 +235,7 @@ const CommentItem = ({ comment, isReply = false }) => {
                     <button
                       type="button"
                       onClick={toggleReplyForm}
-                      className="px-3 py-1 text-sm text-gray-700 bg-gray-100 rounded-md"
+                      className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                       disabled={isReplying}
                     >
                       Cancel
@@ -244,7 +243,7 @@ const CommentItem = ({ comment, isReply = false }) => {
                     <button
                       type="submit"
                       disabled={isReplying || !replyText.trim()}
-                      className="px-3 py-1 text-sm text-white bg-indigo-600 rounded-md disabled:opacity-50"
+                      className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
                       {isReplying ? 'Posting...' : 'Reply'}
                     </button>
@@ -255,7 +254,7 @@ const CommentItem = ({ comment, isReply = false }) => {
           )}
 
           {showReplies && (
-            <div className="mt-3 ml-6 space-y-3 border-l-2 border-gray-200 pl-3">
+            <div className="mt-4 ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
               {isLoadingReplies ? (
                 <p className="text-sm text-gray-500">Loading replies...</p>
               ) : replies && replies.length > 0 ? (

@@ -18,4 +18,6 @@ public interface ICommentService {
     List<Comment> findByUserId(Long userId);
     List<Comment> findRepliesByCommentId(Long commentId);
     int countTotalCommentsAndReplies(Long publicationId);
+
+    boolean canUserCommentInGroup(Long groupId, Long userId);
 }

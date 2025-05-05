@@ -28,4 +28,14 @@ public interface IPublicationService {
     List<Publication> findByPrivacyLevel(Publication.PrivacyLevel privacyLevel);
 
     void incrementViewCount(Long id);
+    List<Publication> findByTargetUserId(Long targetUserId);
+    Page<Publication> findByTargetUserIdPaginated(Long targetUserId, Pageable pageable);
+    Page<Publication> findByUserIdOrTargetUserIdPaginated(Long userId, Long targetUserId, Pageable pageable);
+    Page<Publication> findUserTimelinePublications(Long userId, Pageable pageable);
+
+    Page<Publication> findByGroupIdPaginated(Long groupId, Pageable pageable);
+
+
+    boolean canUserPostInGroup(Long groupId, Long userId);
+    Page<Publication> findAllPaginatedForUser(Long userId, Pageable pageable);
 }

@@ -1,7 +1,10 @@
 package com.example.app.Service;
 
 import com.example.app.Entities.Comment;
+import com.example.app.Entities.Group;
+import com.example.app.Entities.GroupMemberSettings;
 import com.example.app.Repository.CommentRepository;
+import com.example.app.Repository.GroupRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -18,8 +21,18 @@ public class CommentServiceImpl implements ICommentService {
     @Autowired
     private CommentRepository commentRepository;
 
+    @Autowired
+    private GroupRepository groupRepository;
+
     @Override
     public Comment saveComment(Comment comment) {
+        // Check if the comment is in a group and if the user is restricted from commenting
+        if (comment.getPublication().getGroup() != null) {
+            if (!canUserCommentInGroup(comment.getPublication().getGroup().getId(), comment.getUser().getId())) {
+                throw new RuntimeException("User is restricted from commenting in this group");
+            }
+        }
+        comment.setCreateDate(LocalDateTime.now());
         return commentRepository.save(comment);
     }
 
@@ -69,6 +82,7 @@ public class CommentServiceImpl implements ICommentService {
     public List<Comment> findRepliesByCommentId(Long commentId) {
         return commentRepository.findByParentCommentId(commentId);
     }
+
     @Override
     public int countTotalCommentsAndReplies(Long publicationId) {
         // Count top-level comments (where parentComment is null)
@@ -80,4 +94,14 @@ public class CommentServiceImpl implements ICommentService {
         return commentCount + replyCount;
     }
 
+    @Override
+    public boolean canUserCommentInGroup(Long groupId, Long userId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("Group not found with id: " + groupId));
+        return group.getMemberSettings().stream()
+                .filter(s -> s.getUser().getId().equals(userId))
+                .findFirst()
+                .map(GroupMemberSettings::isCanComment)
+                .orElse(false);
+    }
 }

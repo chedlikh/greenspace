@@ -46,6 +46,7 @@ public class CommentController {
         Publication publication = publicationService.findById(publicationId)
                 .orElseThrow(() -> new EntityNotFoundException("Publication not found with id: " + publicationId));
 
+        // The service layer will check commenting restrictions
         Comment comment = commentMapper.toEntity(commentDto);
         comment.setUser(currentUser);
         comment.setPublication(publication);
@@ -65,6 +66,7 @@ public class CommentController {
         Comment parentComment = commentService.findById(parentCommentId)
                 .orElseThrow(() -> new EntityNotFoundException("Parent comment not found with id: " + parentCommentId));
 
+        // The service layer will check commenting restrictions
         Comment reply = commentMapper.toEntity(replyDto);
         reply.setUser(currentUser);
         reply.setPublication(parentComment.getPublication());
@@ -133,6 +135,7 @@ public class CommentController {
         commentService.deleteComment(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
     @GetMapping("/publication/{publicationId}/count")
     public ResponseEntity<Integer> getTotalCommentsAndRepliesCount(@PathVariable Long publicationId) {
         int totalCount = commentService.countTotalCommentsAndReplies(publicationId);

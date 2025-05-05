@@ -17,6 +17,7 @@ const fetchPublicationComments = async ({ publicationId, page = 0, size = 10, to
   }
   return response.json();
 };
+
 // Fetch comment replies
 const fetchCommentReplies = async ({ commentId, token }) => {
   if (!token) throw new Error("No token provided");
@@ -52,6 +53,9 @@ const addComment = async ({ publicationId, commentData, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 403) {
+      throw new Error('You do not have permission to comment on this publication');
+    }
     throw new Error(errorData.message || 'Failed to add comment');
   }
 
@@ -74,6 +78,9 @@ const replyToComment = async ({ parentCommentId, replyData, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 403) {
+      throw new Error('You do not have permission to reply to this comment');
+    }
     throw new Error(errorData.message || 'Failed to add reply');
   }
 
@@ -96,6 +103,9 @@ const updateComment = async ({ id, commentData, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 403) {
+      throw new Error('You do not have permission to update this comment');
+    }
     throw new Error(errorData.message || 'Failed to update comment');
   }
 
@@ -116,11 +126,31 @@ const deleteComment = async ({ id, publicationId, parentCommentId, token }) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 403) {
+      throw new Error('You do not have permission to delete this comment');
+    }
     throw new Error(errorData.message || 'Failed to delete comment');
   }
 
-  // Return the provided IDs since the API returns no body
   return { publicationId, parentCommentId };
+};
+
+// Fetch comment count for a publication
+const fetchPublicationCommentCount = async ({ publicationId, token }) => {
+  if (!token) throw new Error("No token provided");
+  if (!publicationId) throw new Error("No publicationId provided");
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/comments/publication/${publicationId}/count`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to fetch comment count');
+  }
+
+  return response.json();
 };
 
 // React Query hooks
@@ -131,6 +161,21 @@ export const usePublicationComments = (publicationId, page, size) => {
     queryFn: () => fetchPublicationComments({ publicationId, page, size, token }),
     enabled: !!publicationId && !!token,
     keepPreviousData: true,
+    select: (data) => ({
+      ...data,
+      content: data.content.map((comment) => ({
+        id: comment.id,
+        content: comment.content,
+        user: {
+          id: comment.user?.id,
+          username: comment.user?.username,
+        },
+        publicationId: comment.publicationId,
+        parentCommentId: comment.parentCommentId,
+        createDate: comment.createDate,
+        isEdited: comment.isEdited,
+      })),
+    }),
   });
 };
 
@@ -141,59 +186,21 @@ export const useCommentReplies = (commentId) => {
     queryKey: ['commentReplies', commentId],
     queryFn: () => fetchCommentReplies({ commentId, token }),
     enabled: !!commentId && !!token,
+    select: (data) =>
+      data.map((reply) => ({
+        id: reply.id,
+        content: reply.content,
+        user: {
+          id: reply.user?.id,
+          username: reply.user?.username,
+        },
+        publicationId: reply.publicationId,
+        parentCommentId: reply.parentCommentId,
+        createDate: reply.createDate,
+        isEdited: reply.isEdited,
+      })),
   });
 };
-
-
-
-
-
-export const useUpdateComment = () => {
-  const token = useSelector((state) => state.auth.token);
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, commentData }) => updateComment({ id, commentData, token }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['publicationComments', data.publicationId]);
-      if (data.parentCommentId) {
-        queryClient.invalidateQueries(['commentReplies', data.parentCommentId]);
-      }
-    },
-  });
-};
-
-
-const fetchPublicationCommentCount = async ({ publicationId, token }) => {
-  if (!token) throw new Error("No token provided");
-  if (!publicationId) throw new Error("No publicationId provided");
-  
-  const response = await fetch(
-    `${API_BASE_URL}/api/comments/publication/${publicationId}/count`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to fetch comment count');
-  }
-  
-  return response.json();
-};
-
-// Add this hook to the exports
-export const usePublicationCommentCount = (publicationId) => {
-  const token = useSelector((state) => state.auth.token);
-  
-  return useQuery({
-    queryKey: ['publicationCommentCount', publicationId],
-    queryFn: () => fetchPublicationCommentCount({ publicationId, token }),
-    enabled: !!publicationId && !!token,
-  });
-};
-
-// Also update the useAddComment, useReplyToComment, and useDeleteComment hooks
-// to invalidate the comment count query when comments change
 
 export const useAddComment = () => {
   const token = useSelector((state) => state.auth.token);
@@ -222,12 +229,27 @@ export const useReplyToComment = () => {
   });
 };
 
+export const useUpdateComment = () => {
+  const token = useSelector((state) => state.auth.token);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, commentData }) => updateComment({ id, commentData, token }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['publicationComments', data.publicationId]);
+      if (data.parentCommentId) {
+        queryClient.invalidateQueries(['commentReplies', data.parentCommentId]);
+      }
+    },
+  });
+};
+
 export const useDeleteComment = () => {
   const token = useSelector((state) => state.auth.token);
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, publicationId, parentCommentId }) =>
+    mutation_FN: ({ id, publicationId, parentCommentId }) =>
       deleteComment({ id, publicationId, parentCommentId, token }),
     onSuccess: (data) => {
       queryClient.invalidateQueries(['publicationComments', data.publicationId]);
@@ -236,5 +258,15 @@ export const useDeleteComment = () => {
         queryClient.invalidateQueries(['commentReplies', data.parentCommentId]);
       }
     },
+  });
+};
+
+export const usePublicationCommentCount = (publicationId) => {
+  const token = useSelector((state) => state.auth.token);
+
+  return useQuery({
+    queryKey: ['publicationCommentCount', publicationId],
+    queryFn: () => fetchPublicationCommentCount({ publicationId, token }),
+    enabled: !!publicationId && !!token,
   });
 };

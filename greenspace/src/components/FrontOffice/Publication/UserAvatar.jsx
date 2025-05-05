@@ -6,33 +6,28 @@ const UserAvatar = ({ user, size = 'md' }) => {
     sm: 'h-8 w-8',
     md: 'h-10 w-10',
     lg: 'h-12 w-12',
-    xl: 'h-16 w-16'
+    xl: 'h-16 w-16',
   };
 
-  // Construct fullName for alt text
-  const fullName = user 
-    ? `${user.firstname || ''} ${user.lastName || ''}`.trim() 
-    : 'User avatar';
+  const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8089';
 
-  if (!user) {
-    return (
-      <div className={`${sizes[size]} rounded-full overflow-hidden bg-gray-200 flex-shrink-0`}>
-        <img
-          src="/default-avatar.png"
-          alt="Default avatar"
-          className="w-full h-full object-cover"
-        />
-      </div>
-    );
-  }
+  // Use user prop directly, fallback to defaults if fields are missing
+  const fullName = user?.firstname || user?.lastName
+    ? `${user.firstname || ''} ${user.lastName || ''}`.trim()
+    : user?.username || 'Anonymous User';
+
+  const profilePhoto = user?.photoProfile
+    ? `${BASE_URL}/images/${user.photoProfile}`
+    : '/default-avatar.png';
 
   return (
-    <div className={`${sizes[size]} rounded-full overflow-hidden bg-gray-200 flex-shrink-0`}>
+    <div className={`${sizes[size]} rounded-full overflow-hidden bg-gray-200 flex-shrink-0 shadow-sm`}>
       <img
-        src={user.photoProfile ? `http://localhost:8089/images/${user.photoProfile}` : '/default-avatar.png'}
+        src={profilePhoto}
         alt={fullName}
         className="w-full h-full object-cover"
         onError={(e) => {
+          console.warn(`Failed to load image: ${profilePhoto}`);
           e.target.src = '/default-avatar.png';
         }}
       />

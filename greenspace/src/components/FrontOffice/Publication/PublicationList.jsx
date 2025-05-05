@@ -1,11 +1,9 @@
-
 import { useState } from 'react';
 import { usePublications } from '../../../services/publications';
 import PublicationCard from './PublicationCard';
 import Pagination from './Pagination';
-import LoadingSpinner from '../../FrontOffice/LoadingSpinner';
+import LoadingSpinner from './../LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
-import { toast } from 'react-toastify';
 
 const PublicationList = () => {
   const [page, setPage] = useState(0);
@@ -15,18 +13,28 @@ const PublicationList = () => {
 
   const { data, isLoading, isError, error } = usePublications(page, size, sortBy, direction);
 
+  // Debug logging
+  console.log('PublicationList data:', data);
+  console.log('PublicationList content:', data?.content);
+  if (data?.content) {
+    data.content.forEach((pub, index) => {
+      console.log(`Publication ${index} user:`, pub.user);
+      console.log(`Publication ${index} photoProfile:`, pub.user?.photoProfile);
+    });
+  }
+
   if (isLoading) return <LoadingSpinner />;
   if (isError) return <ErrorMessage message={error.message} />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Recent Publications</h2>
-        <div className="flex space-x-2">
+    <div className="space-y-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold text-gray-900">Recent Publications</h2>
+        <div className="flex space-x-3">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
           >
             <option value="createDate">Date</option>
             <option value="viewCount">Views</option>
@@ -34,7 +42,7 @@ const PublicationList = () => {
           <select
             value={direction}
             onChange={(e) => setDirection(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
           >
             <option value="desc">Descending</option>
             <option value="asc">Ascending</option>
@@ -42,10 +50,18 @@ const PublicationList = () => {
         </div>
       </div>
 
-      <div className="space-y-4">
-        {data?.content?.map((publication) => (
-          <PublicationCard key={publication.id} publication={publication} />
-        )) || <p className="text-gray-500">No publications available.</p>}
+      <div className="space-y-6">
+        {data?.content?.length > 0 ? (
+          data.content.map((publication) => (
+            <PublicationCard
+              key={publication.id}
+              publication={publication}
+              group={publication.group}
+            />
+          ))
+        ) : (
+          <p className="text-gray-500 text-center">No publications available.</p>
+        )}
       </div>
 
       <Pagination

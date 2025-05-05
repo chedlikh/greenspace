@@ -1,6 +1,9 @@
 package com.example.app.Service;
 
+import com.example.app.Entities.Group;
+import com.example.app.Entities.GroupMemberSettings;
 import com.example.app.Entities.Publication;
+import com.example.app.Repository.GroupRepository;
 import com.example.app.Repository.PublicationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +21,18 @@ public class PublicationServiceImpl implements IPublicationService {
     @Autowired
     private PublicationRepository publicationRepository;
 
+    @Autowired
+    private GroupRepository groupRepository;
+
     @Override
     public Publication savePublication(Publication publication) {
+        // Check if the publication is in a group and if the user is restricted from posting
+        if (publication.getGroup() != null) {
+            if (!canUserPostInGroup(publication.getGroup().getId(), publication.getUser().getId())) {
+                throw new RuntimeException("User is restricted from posting in this group");
+            }
+        }
+        publication.setCreateDate(LocalDateTime.now());
         return publicationRepository.save(publication);
     }
 
@@ -79,5 +92,46 @@ public class PublicationServiceImpl implements IPublicationService {
                 .orElseThrow(() -> new EntityNotFoundException("Publication not found with id: " + id));
         publication.setViewCount(publication.getViewCount() + 1);
         publicationRepository.save(publication);
+    }
+
+    @Override
+    public List<Publication> findByTargetUserId(Long targetUserId) {
+        return publicationRepository.findByTargetUserId(targetUserId);
+    }
+
+    @Override
+    public Page<Publication> findByTargetUserIdPaginated(Long targetUserId, Pageable pageable) {
+        return publicationRepository.findByTargetUserId(targetUserId, pageable);
+    }
+
+    @Override
+    public Page<Publication> findByUserIdOrTargetUserIdPaginated(Long userId, Long targetUserId, Pageable pageable) {
+        return publicationRepository.findByUserIdOrTargetUserId(userId, targetUserId, pageable);
+    }
+
+    @Override
+    public Page<Publication> findUserTimelinePublications(Long userId, Pageable pageable) {
+        return publicationRepository.findUserTimelinePublications(userId, pageable);
+    }
+
+    @Override
+    public Page<Publication> findByGroupIdPaginated(Long groupId, Pageable pageable) {
+        return publicationRepository.findByGroupId(groupId, pageable);
+    }
+
+    @Override
+    public Page<Publication> findAllPaginatedForUser(Long userId, Pageable pageable) {
+        return publicationRepository.findPublicationsForUser(userId, pageable);
+    }
+
+    @Override
+    public boolean canUserPostInGroup(Long groupId, Long userId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("Group not found with id: " + groupId));
+        return group.getMemberSettings().stream()
+                .filter(s -> s.getUser().getId().equals(userId))
+                .findFirst()
+                .map(GroupMemberSettings::isCanPost)
+                .orElse(false);
     }
 }

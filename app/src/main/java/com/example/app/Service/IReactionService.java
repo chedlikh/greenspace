@@ -18,4 +18,5 @@ public interface IReactionService {
     Map<Reaction.ReactionType, Long> countReactionsByCommentId(Long commentId);
     long countTotalReactionsByPublicationId(Long publicationId);
     long countTotalReactionsByCommentId(Long commentId);
+    long countByGroupIdAndUserId(Long groupId, Long userId);
 }

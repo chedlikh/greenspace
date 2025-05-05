@@ -6,7 +6,7 @@ import Navbar from './components/NavBar/Navbar';
 import NavLeft from './components/NavBar/NavLeft';
 import Settings from './components/Admin/Settings';
 import MyInfo from './components/user/MyInfo';
-import AdminDashboard from './components/Admin/AdminDashboard'; // Ajout du dashboard admin
+import AdminDashboard from './components/Admin/AdminDashboard';
 import { loadUser } from './features/authSlice';
 import ListUsers from './components/Admin/ListUsers';
 import DetailsUser from './components/Admin/DetailsUser';
@@ -28,7 +28,6 @@ import SondageDetail from './components/Admin/Sondage/SondageDetail';
 import CreateSondage from './components/Admin/Sondage/CreateSondage';
 import { StoryDetails } from './components/Admin/Story/StoryDetails';
 import { CreateStory } from './components/Admin/Story/CreateStory';
-import StoryList from './components/Admin/Story/StoryAlbum';
 import StoryAlbum from './components/Admin/Story/StoryAlbum';
 import ProfilePage from './components/FrontOffice/ProfilePage';
 import { useNotificationSubscription } from './services/websocket';
@@ -36,8 +35,9 @@ import NotificationManager from './components/NotificationManager';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import HomePage from './components/FrontOffice/HomePage';
-
-
+import GroupList from './components/FrontOffice/Group/GroupList';
+import GroupProfile from './components/FrontOffice/Group/GroupProfile';
+import CreateGroupForm from './components/FrontOffice/Group/CreateGroupForm';
 
 function App() {
   const dispatch = useDispatch();
@@ -49,13 +49,11 @@ function App() {
 
   if (isLoading) {
     return <div>Loading...</div>;
-    
   }
 
   return (
-    
     <BrowserRouter>
-    <ToastContainer />
+      <ToastContainer />
       <AppContent />
     </BrowserRouter>
   );
@@ -67,13 +65,13 @@ function AppContent() {
 
   const isAdmin = user?.role === 'admin';
   const showNavbarAndNavLeft = location.pathname !== '/login';
- 
+  const showNavLeft = showNavbarAndNavLeft && !location.pathname.match(/^\/groups\/\d+$/);
 
   return (
     <>
       {showNavbarAndNavLeft && <Navbar />}
       <div className="middle-sidebar-bottom">
-        {showNavbarAndNavLeft && <NavLeft />}
+        {showNavLeft && <NavLeft />}
         <NotificationManager />
         <Routes>
           {/* Redirection par défaut */}
@@ -97,7 +95,6 @@ function AppContent() {
           {/* Paramètres utilisateur */}
           <Route path="/settings" element={token ? <Settings /> : <Navigate to="/login" replace />} />
 
-          
           <Route path="/admin" element={token ? <AdminDashboard /> : <Navigate to="/login" replace />} />
           <Route path="/users" element={token ? <ListUsers /> : <Navigate to="/login" replace />} />
           <Route path="/u/:username" element={token ? <DetailsUser /> : <Navigate to="/login" replace />} />
@@ -123,7 +120,9 @@ function AppContent() {
           <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/profile/:username" element={token ? <ProfilePage /> : <Navigate to="/login" replace />} />
           <Route path="/home" element={token ? <HomePage /> : <Navigate to="/login" replace />} />
-
+          <Route path="/groups" element={token ? <GroupList /> : <Navigate to="/login" replace />} />
+          <Route path="/create-group" element={token ? <CreateGroupForm /> : <Navigate to="/login" replace />} />
+          <Route path="/groups/:id" element={token ? <GroupProfile /> : <Navigate to="/login" replace />} />
           {/* Page 404 */}
           <Route path="*" element={<div>404 Not Found</div>} />
         </Routes>

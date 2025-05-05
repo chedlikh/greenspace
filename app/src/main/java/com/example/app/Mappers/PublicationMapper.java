@@ -1,5 +1,6 @@
 package com.example.app.Mappers;
 
+import com.example.app.DTOs.CrossUserPublicationDTO;
 import com.example.app.DTOs.PublicationCreateDTO;
 import com.example.app.DTOs.PublicationDTO;
 import com.example.app.DTOs.UserDTO;
@@ -22,6 +23,9 @@ public class PublicationMapper {
     @Autowired
     private ReactionMapper reactionMapper;
 
+    @Autowired
+    private GroupMapper groupMapper; // Add GroupMapper dependency
+
     public PublicationDTO toDto(Publication publication) {
         PublicationDTO dto = new PublicationDTO();
         dto.setId(publication.getId());
@@ -35,6 +39,14 @@ public class PublicationMapper {
 
         if (publication.getUser() != null) {
             dto.setUser(mapUserToDto(publication.getUser()));
+        }
+
+        if (publication.getTargetUser() != null) {
+            dto.setTargetUser(mapUserToDto(publication.getTargetUser()));
+        }
+
+        if (publication.getGroup() != null) {
+            dto.setGroup(groupMapper.toDto(publication.getGroup())); // Map group to GroupDTO
         }
 
         if (publication.getComments() != null) {
@@ -67,6 +79,15 @@ public class PublicationMapper {
     }
 
     public Publication toEntity(PublicationCreateDTO dto) {
+        Publication publication = new Publication();
+        publication.setContent(dto.getContent());
+        publication.setPrivacyLevel(dto.getPrivacyLevel());
+        publication.setLocation(dto.getLocation());
+        publication.setFeeling(dto.getFeeling());
+        return publication;
+    }
+
+    public Publication toCrossUserEntity(CrossUserPublicationDTO dto) {
         Publication publication = new Publication();
         publication.setContent(dto.getContent());
         publication.setPrivacyLevel(dto.getPrivacyLevel());

@@ -105,8 +105,11 @@ const Navbar = () => {
           {user ? (
             <>
               <button className="create-post-btn">
+              <Link to="/create-group">
+              
                 <i className="feather-plus-circle"></i>
                 <span>Create</span>
+                </Link>
               </button>
               <Dropdown>
                 <Dropdown.Toggle as="div" id="dropdown-settings" className="settings-toggle">
@@ -130,7 +133,7 @@ const Navbar = () => {
                 <Dropdown.Toggle as="div" id="dropdown-profile" className="profile-toggle">
                   <img
 
-                    src={user.photoProfile ? `http://greenspace.ddns.net:8089/images/${user.photoProfile}` : "images/default-user.png"}
+                    src={user.photoProfile ? `http://localhost:8089/images/${user.photoProfile}` : "images/default-user.png"}
                     alt="Profile"
                     className="profile-image"
                   />

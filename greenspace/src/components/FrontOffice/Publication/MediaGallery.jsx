@@ -10,10 +10,10 @@ import { useSelector } from 'react-redux';
 const MediaGallery = ({ media }) => {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [mediaUrls, setMediaUrls] = useState({}); // Store blob URLs for media
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [mediaUrls, setMediaUrls] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
   const token = useSelector((state) => state.auth.token);
-  const fetchedMedia = useRef(new Set()); // Track fetched media IDs
+  const fetchedMedia = useRef(new Set());
 
   const openModal = (mediaItem) => {
     setSelectedMedia(mediaItem);
@@ -25,7 +25,6 @@ const MediaGallery = ({ media }) => {
     setSelectedMedia(null);
   };
 
-  // Fetch media file with authentication and create blob URL
   const fetchMedia = async (fileUrl, mediaId) => {
     if (!fileUrl || !token) {
       console.warn('Missing fileUrl or token', { fileUrl, token, mediaId });
@@ -38,7 +37,6 @@ const MediaGallery = ({ media }) => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        // Add cache control to prevent caching issues
         cache: 'no-cache',
       });
 
@@ -56,14 +54,12 @@ const MediaGallery = ({ media }) => {
     }
   };
 
-  // Load media URLs when media or token changes
   useEffect(() => {
     const loadMediaUrls = async () => {
       setIsLoading(true);
       const newMediaUrls = {};
       const fetchPromises = [];
 
-      // Create an array of promises for all media items
       for (const mediaItem of media) {
         if (mediaItem.fileUrl && !fetchedMedia.current.has(mediaItem.id)) {
           fetchedMedia.current.add(mediaItem.id);
@@ -77,7 +73,6 @@ const MediaGallery = ({ media }) => {
         }
       }
 
-      // Wait for all promises to resolve
       await Promise.all(fetchPromises);
       
       setMediaUrls(prev => ({ ...prev, ...newMediaUrls }));
@@ -90,7 +85,6 @@ const MediaGallery = ({ media }) => {
       setIsLoading(false);
     }
 
-    // Cleanup blob URLs
     return () => {
       Object.values(mediaUrls).forEach((url) => {
         if (url && url.startsWith('blob:')) {
@@ -113,22 +107,21 @@ const MediaGallery = ({ media }) => {
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-48">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
     </div>;
   }
 
   if (!media || media.length === 0) return <p className="text-gray-500">No media available</p>;
 
-  // Get the blob URL for a media item
   const getMediaUrl = (mediaItem) => {
-    return mediaUrls[mediaItem.id] || ''; // Return empty string if blob URL not yet loaded
+    return mediaUrls[mediaItem.id] || '';
   };
 
   const handleMediaError = (e) => {
     console.error('Media failed to load:', e);
-    e.target.style.display = 'none'; // Hide broken media
+    e.target.style.display = 'none';
     if (e.target.nextSibling) {
-      e.target.nextSibling.style.display = 'block'; // Show fallback message
+      e.target.nextSibling.style.display = 'block';
     }
   };
 
@@ -136,7 +129,6 @@ const MediaGallery = ({ media }) => {
     const mediaItem = media[0];
     const mediaUrl = getMediaUrl(mediaItem);
     
-    // Don't render if no URL is available yet
     if (!mediaUrl) {
       return <p className="text-gray-500">Loading media...</p>;
     }
@@ -148,7 +140,7 @@ const MediaGallery = ({ media }) => {
             <img
               src={mediaUrl}
               alt={mediaItem.caption || 'Publication media'}
-              className="w-full h-auto max-h-96 object-contain rounded-lg cursor-pointer"
+              className="w-full h-auto max-h-[500px] object-contain rounded-2xl cursor-pointer shadow-md"
               onClick={() => openModal(mediaItem)}
               onError={handleMediaError}
             />
@@ -158,7 +150,7 @@ const MediaGallery = ({ media }) => {
           <>
             <video
               controls
-              className="w-full h-auto max-h-96 rounded-lg"
+              className="w-full h-auto max-h-[500px] rounded-2xl shadow-md"
               onError={handleMediaError}
             >
               <source
@@ -172,15 +164,15 @@ const MediaGallery = ({ media }) => {
         )}
         {isModalOpen && (
           <div
-            className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center"
+            className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center"
             onClick={closeModal}
           >
-            <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={closeModal}
-                className="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none"
+                className="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none bg-gray-800 bg-opacity-50 rounded-full p-2"
               >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -193,13 +185,13 @@ const MediaGallery = ({ media }) => {
                 <img
                   src={getMediaUrl(selectedMedia)}
                   alt={selectedMedia.caption || 'Publication media'}
-                  className="max-h-screen max-w-full mx-auto"
+                  className="max-h-[90vh] max-w-full mx-auto rounded-2xl"
                 />
               ) : (
                 <video
                   controls
                   autoPlay
-                  className="max-h-screen max-w-full mx-auto"
+                  className="max-h-[90vh] max-w-full mx-auto rounded-2xl"
                 >
                   <source
                     src={getMediaUrl(selectedMedia)}
@@ -224,11 +216,10 @@ const MediaGallery = ({ media }) => {
         navigation
         pagination={{ clickable: true }}
         zoom
-        className="rounded-lg"
+        className="rounded-2xl shadow-md"
       >
         {media.map((mediaItem) => {
           const mediaUrl = getMediaUrl(mediaItem);
-          // Skip rendering slides with no URL
           if (!mediaUrl) return null;
           
           return (
@@ -239,7 +230,7 @@ const MediaGallery = ({ media }) => {
                     <img
                       src={mediaUrl}
                       alt={mediaItem.caption || 'Publication media'}
-                      className="w-full h-96 object-cover cursor-pointer"
+                      className="w-full h-[500px] object-cover cursor-pointer rounded-2xl"
                       onClick={() => openModal(mediaItem)}
                       onError={handleMediaError}
                     />
@@ -249,7 +240,7 @@ const MediaGallery = ({ media }) => {
                   <>
                     <video
                       controls
-                      className="w-full h-96 object-cover"
+                      className="w-full h-[500px] object-cover rounded-2xl"
                       onError={handleMediaError}
                     >
                       <source
@@ -269,15 +260,15 @@ const MediaGallery = ({ media }) => {
 
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center"
+          className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center"
           onClick={closeModal}
         >
-          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none"
+              className="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none bg-gray-800 bg-opacity-50 rounded-full p-2"
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -290,13 +281,13 @@ const MediaGallery = ({ media }) => {
               <img
                 src={getMediaUrl(selectedMedia)}
                 alt={selectedMedia.caption || 'Publication media'}
-                className="max-h-screen max-w-full mx-auto"
+                className="max-h-[90vh] max-w-full mx-auto rounded-2xl"
               />
             ) : (
               <video
                 controls
                 autoPlay
-                className="max-h-screen max-w-full mx-auto"
+                className="max-h-[90vh] max-w-full mx-auto rounded-2xl"
               >
                 <source
                   src={getMediaUrl(selectedMedia)}

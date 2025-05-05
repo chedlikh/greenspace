@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const Pagination = ({ currentPage, totalPages, onPageChange, pageSize, onPageSizeChange }) => {
@@ -17,63 +16,63 @@ const Pagination = ({ currentPage, totalPages, onPageChange, pageSize, onPageSiz
   }
 
   return (
-    <div className="flex items-center justify-between mt-4">
+    <div className="flex items-center justify-between mt-6">
       <div className="flex items-center space-x-2">
         <button
           onClick={() => onPageChange(0)}
           disabled={currentPage === 0}
-          className={`px-3 py-1 rounded-md ${currentPage === 0 ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${currentPage === 0 ? 'bg-gray-200 cursor-not-allowed' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors'}`}
         >
           «
         </button>
         <button
           onClick={() => onPageChange(Math.max(0, currentPage - 1))}
           disabled={currentPage === 0}
-          className={`px-3 py-1 rounded-md ${currentPage === 0 ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${currentPage === 0 ? 'bg-gray-200 cursor-not-allowed' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors'}`}
         >
           ‹
         </button>
 
         {startPage > 0 && (
-          <span className="px-3 py-1">...</span>
+          <span className="px-4 py-2 text-gray-600">...</span>
         )}
 
         {pageNumbers.map((number) => (
           <button
             key={number}
             onClick={() => onPageChange(number)}
-            className={`px-3 py-1 rounded-md ${currentPage === number ? 'bg-indigo-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
+            className={`px-4 py-2 rounded-lg ${currentPage === number ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors'}`}
           >
             {number + 1}
           </button>
         ))}
 
         {endPage < totalPages - 1 && (
-          <span className="px-3 py-1">...</span>
+          <span className="px-4 py-2 text-gray-600">...</span>
         )}
 
         <button
           onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
           disabled={currentPage === totalPages - 1}
-          className={`px-3 py-1 rounded-md ${currentPage === totalPages - 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${currentPage === totalPages - 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors'}`}
         >
           ›
         </button>
         <button
           onClick={() => onPageChange(totalPages - 1)}
           disabled={currentPage === totalPages - 1}
-          className={`px-3 py-1 rounded-md ${currentPage === totalPages - 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}`}
+          className={`px-4 py-2 rounded-lg ${currentPage === totalPages - 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors'}`}
         >
           »
         </button>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-3">
         <span className="text-sm text-gray-600">Items per page:</span>
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="px-2 py-1 border border-gray-300 rounded-md"
+          className="px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
         >
           <option value={5}>5</option>
           <option value={10}>10</option>

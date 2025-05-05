@@ -49,6 +49,14 @@ public class Publication {
     @OneToMany(mappedBy = "publication", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Reaction> reactions = new ArrayList<>();
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "target_user_id")
+    private User targetUser;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "group_id")
+    private Group group;
+
     @PrePersist
     protected void onCreate() {
         this.createDate = LocalDateTime.now();
@@ -160,5 +168,21 @@ public class Publication {
 
     public void setReactions(List<Reaction> reactions) {
         this.reactions = reactions;
+    }
+
+    public User getTargetUser() {
+        return targetUser;
+    }
+
+    public void setTargetUser(User targetUser) {
+        this.targetUser = targetUser;
+    }
+
+    public Group getGroup() {
+        return group;
+    }
+
+    public void setGroup(Group group) {
+        this.group = group;
     }
 }

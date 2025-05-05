@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSelector } from 'react-redux';
@@ -16,13 +15,14 @@ import {
   getStoryMediaUrl,
 } from '../../services/storyService';
 import { Mail, MapPin, Briefcase, User, Users, Calendar, Phone, Globe, Home, Camera, Edit, X, Plus } from 'feather-icons-react';
-import CreatePublicationForm from './Publication/CreatePublicationForm'; // Import from previous response
-import UserProfilePublications from './Publication/UserProfilePublications'; // Import from previous response
+import CreatePublicationForm from './Publication/CreatePublicationForm';
+import UserProfilePublications from './Publication/UserProfilePublications';
 import { toast } from 'react-toastify';
 
 const ProfilePage = () => {
   const { username: urlUsername } = useParams();
   const token = useSelector((state) => state.auth.token);
+  const authUser = useSelector((state) => state.auth.user); // Get authenticated user from Redux
   const queryClient = useQueryClient();
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState(null);
@@ -35,12 +35,10 @@ const ProfilePage = () => {
   const [loadedStoryMedia, setLoadedStoryMedia] = useState(null);
   const [storyProgress, setStoryProgress] = useState(0);
   
-  // File input refs
   const profilePhotoInputRef = useRef(null);
   const coverPhotoInputRef = useRef(null);
   const storyFileInputRef = useRef(null);
 
-  // Get user data
   const currentUserQuery = useQuery({
     queryKey: ['currentUser', token],
     queryFn: () => fetchUserDetails(token),
@@ -49,21 +47,26 @@ const ProfilePage = () => {
 
   const otherUserQuery = useUserDetails(urlUsername);
   
-  // Determine which data to use
   const user = urlUsername ? otherUserQuery.data : currentUserQuery.data;
   const isLoading = urlUsername ? otherUserQuery.isLoading : currentUserQuery.isLoading;
   const isError = urlUsername ? otherUserQuery.isError : currentUserQuery.isError;
   const error = urlUsername ? otherUserQuery.error : currentUserQuery.error;
 
-  // Determine if this is the current user's profile
-  const isCurrentUser = !urlUsername || (user && urlUsername === user.username);
-  const profileUsername = urlUsername || user?.username || '';
+  // Debug: Log user and authUser
+  console.log('ProfilePage - authUser:', authUser);
+  console.log('ProfilePage - user:', user);
 
-  // Fetch stories for the profile we're viewing
+  const isCurrentUser = !urlUsername || (user && authUser && user.username === authUser.username);
+  const profileUsername = urlUsername || (user?.username || '');
+
+  // Debug: Log profileUsername and targetUsername
+  console.log('ProfilePage - urlUsername:', urlUsername);
+  console.log('ProfilePage - profileUsername:', profileUsername);
+  console.log('ProfilePage - targetUsername:', isCurrentUser ? null : profileUsername);
+
   const { data: userStories = [], isLoading: loadingStories } = useActiveStoriesByUser(profileUsername);
   const createStoryMutation = useCreateStory();
 
-  // Click outside handler for photo menu
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (showPhotoMenu && !e.target.closest('.photo-menu-container')) {
@@ -75,16 +78,13 @@ const ProfilePage = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showPhotoMenu]);
 
-  // Story Progress Timer Effect
   useEffect(() => {
     let timer;
     let progressTimer;
     
     if (showStoryViewer && userStories.length > 0) {
-      // Reset progress
       setStoryProgress(0);
       
-      // Load the current story media
       const loadStoryMedia = async () => {
         if (userStories[currentStoryIndex]) {
           const fileName = userStories[currentStoryIndex].mediaUrl;
@@ -109,7 +109,6 @@ const ProfilePage = () => {
       
       loadStoryMedia();
       
-      // Progress animation timer
       progressTimer = setInterval(() => {
         setStoryProgress(prev => {
           const newProgress = prev + (100 / (5000 / 50));
@@ -117,7 +116,6 @@ const ProfilePage = () => {
         });
       }, 50);
       
-      // Story duration timer
       timer = setTimeout(() => {
         if (currentStoryIndex < userStories.length - 1) {
           setCurrentStoryIndex(currentStoryIndex + 1);
@@ -137,7 +135,6 @@ const ProfilePage = () => {
     };
   }, [currentStoryIndex, showStoryViewer, userStories, token]);
 
-  // Mutations for photo uploads
   const uploadProfileMutation = useMutation({
     mutationFn: (file) => uploadProfilePhoto(profileUsername, file, token),
     onSuccess: () => {
@@ -163,7 +160,6 @@ const ProfilePage = () => {
     }
   });
 
-  // Handle file uploads
   const handleProfilePhotoChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -298,9 +294,7 @@ const ProfilePage = () => {
   return (
     <div className="main-content bg-gray-50 min-h-screen">
       <div className="container mx-auto px-4 py-6">
-        {/* Profile Header Card */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
-          {/* Cover Photo */}
           <div 
             className="h-64 bg-cover bg-center relative"
             style={{
@@ -330,9 +324,7 @@ const ProfilePage = () => {
             )}
           </div>
           
-          {/* Profile Info Container */}
           <div className="">
-            {/* Profile Photo Section */}
             <div className="relative -mt-16 mb-4 flex justify-center" style={{ marginRight: "50px", marginLeft: "50px"}}>
               <div className="relative group">
                 {hasActiveStories && (
@@ -397,7 +389,6 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            {/* Stats and Action Buttons */}
             <div className="flex justify-between mt-2">
               <div className="flex space-x-4">
                 <div className="text-center">
@@ -429,7 +420,6 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            {/* User Info */}
             <div className="pt-16 mt-4">
               <div className="text-center" style={{ marginTop: "-100px" }}>
                 <h1 className="text-2xl font-bold text-gray-900">{user.firstname} {user.lastName}</h1>
@@ -437,7 +427,6 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            {/* Navigation Tabs */}
             <div className="px-6 border-t border-gray-100" style={{ marginTop: "-50px" }}>
               <nav className="flex overflow-x-auto">
                 <Link to="#about" className="px-4 py-3 font-medium text-blue-600 border-b-2 border-blue-600 whitespace-nowrap">
@@ -457,11 +446,8 @@ const ProfilePage = () => {
           </div>
         </div>
         
-        {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Sidebar */}
           <div className="lg:col-span-1">
-            {/* About Section */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">About</h2>
               <div className="space-y-4">
@@ -530,7 +516,6 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            {/* Photos Section */}
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Photos</h2>
@@ -550,23 +535,19 @@ const ProfilePage = () => {
             </div>
           </div>
           
-          {/* Main Content Area */}
           <div className="lg:col-span-2">
-            {isCurrentUser && (
-              <CreatePublicationForm
-                onSuccess={() => {
-                  queryClient.invalidateQueries(['userPublications', profileUsername]);
-                }}
-              />
-            )}
+            <CreatePublicationForm
+              targetUsername={isCurrentUser ? null : profileUsername}
+              onSuccess={() => {
+                queryClient.invalidateQueries(['userTimelinePublications', profileUsername]);
+              }}
+            />
             
-            {/* User Posts */}
             <UserProfilePublications username={profileUsername} />
           </div>
         </div>
       </div>
 
-      {/* Hidden file inputs */}
       <input 
         type="file" 
         ref={profilePhotoInputRef}
@@ -583,7 +564,6 @@ const ProfilePage = () => {
         accept="image/*,video/*"
       />
 
-      {/* Story Creation Modal */}
       {isCurrentUser && showStoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl overflow-hidden max-w-md w-full">
@@ -682,10 +662,8 @@ const ProfilePage = () => {
         </div>
       )}
       
-      {/* Story Viewer Modal */}
       {showStoryViewer && userStories.length > 0 && (
         <div className="fixed inset-0 bg-black flex items-center justify-center z-50" style={{ marginTop: "80px", marginBottom: "40px" }}>
-          {/* Close button */}
           <button 
             onClick={() => {
               setShowStoryViewer(false);
@@ -696,7 +674,6 @@ const ProfilePage = () => {
             <X size={20} />
           </button>
           
-          {/* Story navigation */}
           <button
             onClick={() => navigateStory('prev')}
             className={`absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 p-2 rounded-full hover:bg-black/50 z-10 ${
@@ -718,9 +695,7 @@ const ProfilePage = () => {
             </svg>
           </button>
           
-          {/* Story content */}
           <div className="relative max-w-sm w-full h-full max-h-[85vh] flex items-center justify-center">
-            {/* Progress bar */}
             <div className="absolute top-4 left-4 right-4 flex space-x-1 z-10">
               {userStories.map((_, index) => (
                 <div 
@@ -740,7 +715,6 @@ const ProfilePage = () => {
               ))}
             </div>
             
-            {/* User info */}
             <div className="absolute top-8 left-4 flex items-center z-10">
               <img 
                 src={user.photoProfile ? `${imageBaseUrl + user.photoProfile}` : "/images/default-profile.png"}
@@ -758,7 +732,6 @@ const ProfilePage = () => {
               </div>
             </div>
             
-            {/* Story media */}
             <div className="bg-black flex items-center">
               {loadedStoryMedia ? (
                 userStories[currentStoryIndex]?.mediaType === 'VIDEO' ? (
@@ -782,7 +755,6 @@ const ProfilePage = () => {
               )}
             </div>
             
-            {/* Caption */}
             {userStories[currentStoryIndex]?.caption && (
               <div className="absolute bottom-8 left-4 right-4 bg-black/30 backdrop-blur-sm p-3 rounded-lg z-10">
                 <p className="text-white">{userStories[currentStoryIndex].caption}</p>
