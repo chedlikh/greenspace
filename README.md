@@ -31,7 +31,6 @@
 
 ## 🛠 Tech Stack
 
-```text
 Backend   → Spring Boot 3.4, JPA, JWT, WebSocket
 Frontend  → React + Vite
 Database  → MySQL 5.7 + phpMyAdmin
