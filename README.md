@@ -30,6 +30,7 @@
 ---
 
 ## 🛠 Tech Stack
+```text
 
 Backend   → Spring Boot 3.4, JPA, JWT, WebSocket
 Frontend  → React + Vite
@@ -50,7 +51,7 @@ POST   /api/publications
 GET    /api/groups
 POST   /api/stories/media/user/{username}
 GET    /api/notifications/user/{username}
-
+It ends here
 🏗 CI/CD Pipeline
 ![mermaid-diagram](https://github.com/user-attachments/assets/21260700-b1ee-4270-b8a8-3cd879468e96)<div align="center">
 
@@ -66,7 +67,6 @@ bashgit checkout -b feature/your-idea
 git commit -m "Add amazing feature"
 git push origin feature/your-idea
 → Open a Pull Request
-```text
 
 📄 License
 textMIT License © 2025 chedlikh
