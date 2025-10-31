@@ -35,25 +35,66 @@ Frontend  → React + Vite
 Database  → MySQL 5.7 + phpMyAdmin
 DevOps    → Docker, Jenkins, Nexus
 Auth      → JWT + Spring Security
+```
 
-🚀 Quick Start (Docker)
+---
+
+## 🚀 Quick Start (Docker)
+
+```bash
 git clone https://github.com/chedlikh/greenspace.git
 cd greenspace
 docker compose up -d
+```
+
+Then open [http://localhost:3000](http://localhost:3000) (or your deployed host).
+
+---
+
+## 📡 API Examples
+
+```http
 POST   /api/auth/register
 POST   /api/publications
 GET    /api/groups
 POST   /api/stories/media/user/{username}
 GET    /api/notifications/user/{username}
+```
 
-🏗 CI/CD Pipeline
-![mermaid-diagram](https://github.com/user-attachments/assets/21260700-b1ee-4270-b8a8-3cd879468e96)<div align="center">
+---
 
-📸 Screenshots (coming soon)
-📄 License
+## 🏗 CI/CD Pipeline
 
-MIT License © 2025 chedlikh
-💚 Made with passion for greener cities.
-📧 Email: chedli.khangui@gmail.com
+![CI/CD Diagram](https://github.com/user-attachments/assets/21260700-b1ee-4270-b8a8-3cd879468e96)
 
-⭐ Star this repo if you love it!
+---
+
+## 📸 Screenshots *(coming soon)*
+
+| Feed | Groups | Stories |
+|------|---------|----------|
+| ![Feed](screenshots/feed.png) | ![Group](screenshots/group.png) | ![Story](screenshots/story.png) |
+
+---
+
+## 🤝 Contributing
+
+```bash
+git checkout -b feature/your-idea
+git commit -m "Add amazing feature"
+git push origin feature/your-idea
+```
+
+➡️ Then open a **Pull Request**.
+
+---
+
+## 📄 License
+
+**MIT License © 2025 [chedlikh](https://github.com/chedlikh)**
+
+---
+
+💚 *Made with passion for greener cities.*  
+📧 **Email:** [chedli.khangui@gmail.com](mailto:chedli.khangui@gmail.com)  
+⭐ **Star this repo if you love it!**
