@@ -1,5 +1,3 @@
-![mermaid-diagram](https://github.com/user-attachments/assets/21260700-b1ee-4270-b8a8-3cd879468e96)<div align="center">
-
 # 🌿 GreenSpace
 
 **The social platform for discovering and sharing urban green spaces.**
@@ -55,8 +53,8 @@ POST   /api/stories/media/user/{username}
 GET    /api/notifications/user/{username}
 
 🏗 CI/CD Pipeline
-<img width="2193" height="123" alt="Untitled diagram-2025-10-31-155159" src="https://github.com/user-attachments/assets/87844f1d-3fb4-47a0-8db3-ce43c27b95d6" />
-<img width="2193" height="123" alt="image" src="https://github.com/user-attachments/assets/a7816b54-0ee9-4883-bda8-6349d770f329" />
+![mermaid-diagram](https://github.com/user-attachments/assets/21260700-b1ee-4270-b8a8-3cd879468e96)<div align="center">
+
 
     
 📸 Screenshots (coming soon)
@@ -69,11 +67,12 @@ bashgit checkout -b feature/your-idea
 git commit -m "Add amazing feature"
 git push origin feature/your-idea
 → Open a Pull Request
+```text
 
 📄 License
 textMIT License © 2025 chedlikh
 
 
-                                                                   Made with passion for green cities
-                                                                    Email : chedli.khangui@gmail.com
-                                                                     Star this repo if you love it!
+Made with passion for green cities
+ Email : chedli.khangui@gmail.com
+ Star this repo if you love it!
