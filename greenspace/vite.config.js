@@ -10,6 +10,7 @@ export default defineConfig({
     nodePolyfills({
       protocolImports: true,
     })
+    
   ],
   optimizeDeps: {
     include: ['bootstrap', '@popperjs/core'],}

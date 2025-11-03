@@ -25,6 +25,7 @@ public interface IGroupService {
     String uploadCoverPhoto(Long groupId, MultipartFile file);
     boolean isUserMemberOfGroup(Long userId, Long groupId);
     List<GroupMemberSettings> findTop5Members(Long groupId);
+    GroupMemberStats getMemberStats(Long groupId, Long userId);
     Page<GroupMemberSettings> findSortedMembers(Long groupId, String sortBy, String direction, Pageable pageable);
     void updateMemberSettings(Long groupId, Long userId, boolean canPost, boolean canComment);
 }

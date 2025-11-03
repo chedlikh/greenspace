@@ -15,6 +15,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
+
 public class Group {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

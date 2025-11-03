@@ -18,6 +18,7 @@ public interface UserRepo extends JpaRepository<User,Long> {
             "poste.gservices.sites.societe",
             "roles"
     })
+    List<User> findByUsernameContainingIgnoreCase(String username);
     @Transactional
     Optional<User> findByUsername(String username);
     List<User> findByPhone(Long phone);

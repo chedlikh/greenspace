@@ -2,6 +2,7 @@ package com.example.app.Entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,6 +37,17 @@ public class Poste {
     @OneToMany(mappedBy = "poste", fetch = FetchType.EAGER)
     @JsonIgnore
     private Set<User> users = new HashSet<>();
+    @ManyToMany(mappedBy = "postes")
+    @JsonIgnore
+    private Set<Formation> formations = new HashSet<>();
+
+    public Set<Formation> getFormations() {
+        return formations;
+    }
+
+    public void setFormations(Set<Formation> formations) {
+        this.formations = formations;
+    }
 
     public void assignService(Gservice gservice) {
         this.gservices.add(gservice);

@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,17 +23,18 @@ import java.util.Set;
 public class SondageServiceImpl implements ISondageService {
     private static final Logger logger = LoggerFactory.getLogger(SondageServiceImpl.class);
 
-
     private final SondageRepository sondageRepository;
     private final GserviceRepository gserviceRepository;
     private final UserRepo userRepo;
+
     @Autowired
     private NotificationService notificationService;
+
     @Autowired
-    public SondageServiceImpl(SondageRepository sondageRepository, GserviceRepository gserviceRepository,UserRepo userRepo) {
+    public SondageServiceImpl(SondageRepository sondageRepository, GserviceRepository gserviceRepository, UserRepo userRepo) {
         this.sondageRepository = sondageRepository;
         this.gserviceRepository = gserviceRepository;
-        this.userRepo=userRepo;
+        this.userRepo = userRepo;
     }
 
     @Override
@@ -56,6 +58,7 @@ public class SondageServiceImpl implements ISondageService {
     public void deleteSondage(Long id) {
         sondageRepository.deleteById(id);
     }
+
     @Override
     public Sondage getSondageById(Long id) {
         return sondageRepository.findById(id)
@@ -66,16 +69,23 @@ public class SondageServiceImpl implements ISondageService {
     public List<Sondage> getAllSondages() {
         return sondageRepository.findAll();
     }
-    /*@Override
+
+    @Override
     @Transactional
     public Sondage assignServiceToSondage(Long sondageId, Long serviceId) {
-        Sondage sondage = getSondageById(sondageId);
+        Sondage sondage = sondageRepository.findById(sondageId)
+                .orElseThrow(() -> new RuntimeException("Sondage not found"));
         Gservice service = gserviceRepository.findById(serviceId)
-                .orElseThrow(() -> new EntityNotFoundException("Service not found with id: " + serviceId));
+                .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        sondage.assignService(service);
-        return sondageRepository.save(sondage);
-    }*/
+        sondage.getGservices().add(service);
+        Sondage updatedSondage = sondageRepository.save(sondage);
+
+        // Notify all users in the service through their postes
+        notifyUsersInService(service, sondage);
+
+        return updatedSondage;
+    }
 
     @Override
     @Transactional
@@ -93,21 +103,10 @@ public class SondageServiceImpl implements ISondageService {
         Sondage sondage = getSondageById(sondageId);
         return sondage.getGservices();
     }
+
     @Override
-    @Transactional
-    public Sondage assignServiceToSondage(Long sondageId, Long serviceId) {
-        Sondage sondage = sondageRepository.findById(sondageId)
-                .orElseThrow(() -> new RuntimeException("Sondage not found"));
-        Gservice service = gserviceRepository.findById(serviceId)
-                .orElseThrow(() -> new RuntimeException("Service not found"));
-
-        sondage.getGservices().add(service);
-        Sondage updatedSondage = sondageRepository.save(sondage);
-
-        // Notify all users in the service through their postes
-        notifyUsersInService(service, sondage);
-
-        return updatedSondage;
+    public List<Sondage> getSondagesByServiceId(Long serviceId) {
+        return sondageRepository.findByGservicesId(serviceId);
     }
 
     private void notifyUsersInService(Gservice service, Sondage sondage) {
@@ -140,6 +139,35 @@ public class SondageServiceImpl implements ISondageService {
             logger.error("Error in notifyUsersInService for service {}: {}",
                     service.getId(), e.getMessage(), e);
             throw new RuntimeException("Failed to send notifications", e);
+        }
+    }
+
+    /**
+     * Scheduled task to update the status of all sondages based on their start and end dates.
+     * Runs daily at midnight.
+     */
+    @Scheduled(cron = "0 0 0 * * ?") // Runs every day at midnight
+    @Transactional
+    public void updateAllSondageStatuses() {
+        logger.info("Starting scheduled task to update sondage statuses at {}", LocalDateTime.now());
+        try {
+            List<Sondage> sondages = sondageRepository.findAll();
+            int updatedCount = 0;
+
+            for (Sondage sondage : sondages) {
+                Sondage.SondageStatus oldStatus = sondage.getStatus();
+                sondage.updateStatus();
+                if (sondage.getStatus() != oldStatus) {
+                    sondageRepository.save(sondage);
+                    updatedCount++;
+                    logger.info("Updated sondage {} (ID: {}) status from {} to {}",
+                            sondage.getTitre(), sondage.getId(), oldStatus, sondage.getStatus());
+                }
+            }
+
+            logger.info("Completed sondage status update. Updated {} sondages.", updatedCount);
+        } catch (Exception e) {
+            logger.error("Error during scheduled sondage status update: {}", e.getMessage(), e);
         }
     }
 }

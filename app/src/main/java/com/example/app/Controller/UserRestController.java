@@ -1,5 +1,7 @@
 package com.example.app.Controller;
 
+import com.example.app.DTOs.PasswordResetDTO;
+import com.example.app.DTOs.PasswordResetRequestDTO;
 import com.example.app.Entities.AuthenticationResponse;
 import com.example.app.Entities.User;
 import com.example.app.Repository.UserRepo;
@@ -17,6 +19,7 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -314,6 +317,44 @@ public class UserRestController {
                 "updatedAt", java.time.LocalDateTime.now().toString()
         ));
     }
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<Map<String, String>> requestPasswordReset(@RequestBody PasswordResetRequestDTO request) {
+        Map<String, String> response = authenticationService.createPasswordResetToken(
+                request.getEmailOrPhone(), request.isRequestAdmin());
+        if (response.get("message").startsWith("User not found") ||
+                response.get("message").startsWith("Invalid phone number") ||
+                response.get("message").startsWith("Failed to")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
 
+    @PostMapping("/password-reset")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody PasswordResetDTO resetDTO) {
+        Map<String, String> response = authenticationService.resetPassword(
+                resetDTO.getToken(), resetDTO.getNewPassword());
+        if (response.get("message").startsWith("Invalid reset token") ||
+                response.get("message").startsWith("Token is expired") ||
+                response.get("message").startsWith("Failed to")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/admin_only/update-password")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<Map<String, String>> updateUserPassword(
+            @RequestParam String username,
+            @RequestParam String newPassword) {
+        try {
+            User user = userService.getUserByUsername(username);
+            user.setPassword(authenticationService.encodePassword(newPassword));
+            userRepo.save(user);
+            return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error: " + e.getMessage()));
+        }
+    }
 
 }

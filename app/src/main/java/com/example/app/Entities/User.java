@@ -17,7 +17,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Entity
-@AllArgsConstructor
 @Getter
 @Setter
 public class User implements UserDetails {
@@ -39,8 +38,73 @@ public class User implements UserDetails {
     private LocalDate birthday;
     private LocalDate activeDate;
     private LocalDate createDate;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<FaceProfile> faceProfiles;
 
 
+    public List<FaceProfile> getFaceProfiles() {
+        return faceProfiles;
+    }
+
+    public void setFaceProfiles(List<FaceProfile> faceProfiles) {
+        this.faceProfiles = faceProfiles;
+    }
+
+    public List<Story> getStories() {
+        return stories;
+    }
+
+    public List<Publication> getPublications() {
+        return publications;
+    }
+
+    public void setPublications(List<Publication> publications) {
+        this.publications = publications;
+    }
+
+    public List<Comment> getComments() {
+        return comments;
+    }
+
+    public void setComments(List<Comment> comments) {
+        this.comments = comments;
+    }
+
+    public List<Reaction> getReactions() {
+        return reactions;
+    }
+
+    public void setReactions(List<Reaction> reactions) {
+        this.reactions = reactions;
+    }
+
+    public User(Long id, String email, String username, String password, String photoProfile, String photoCover, String firstname, String lastName, String gender, String adress, String country, Long phone, Boolean isValide, LocalDate birthday, LocalDate activeDate, LocalDate createDate, List<FaceProfile> faceProfiles, Boolean isConnect, Set<Role> roles, List<Token> tokens, Poste poste, List<Story> stories, List<Publication> publications, List<Comment> comments, List<Reaction> reactions) {
+        this.id = id;
+        this.email = email;
+        this.username = username;
+        this.password = password;
+        this.photoProfile = photoProfile;
+        this.photoCover = photoCover;
+        this.firstname = firstname;
+        this.lastName = lastName;
+        this.gender = gender;
+        this.adress = adress;
+        this.country = country;
+        this.phone = phone;
+        this.isValide = isValide;
+        this.birthday = birthday;
+        this.activeDate = activeDate;
+        this.createDate = createDate;
+        this.faceProfiles = faceProfiles;
+        this.isConnect = isConnect;
+        this.roles = roles;
+        this.tokens = tokens;
+        this.poste = poste;
+        this.stories = stories;
+        this.publications = publications;
+        this.comments = comments;
+        this.reactions = reactions;
+    }
 
     @PrePersist
     protected void onCreate() {this.createDate = LocalDate.now();}

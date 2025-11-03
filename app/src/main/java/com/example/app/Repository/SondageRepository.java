@@ -13,4 +13,6 @@ public interface SondageRepository extends JpaRepository<Sondage, Long> {
 
     @Query("SELECT s FROM Sondage s JOIN s.gservices g WHERE g.id = :serviceId")
     List<Sondage> findByServiceId(@Param("serviceId") Long serviceId);
+    List<Sondage> findByGservicesId(Long serviceId);
+
 }

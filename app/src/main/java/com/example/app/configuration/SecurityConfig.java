@@ -70,6 +70,8 @@ public class SecurityConfig {
                                 "/ws-notifications/**",
                                 "/app/**",
                                 "/ws/**",
+                                "/password-reset/request/**",
+                                "/password-reset/**",
                                 "/topic/**"
                         ).permitAll()
                         .requestMatchers("/admin_only/**").hasAuthority("ADMIN")

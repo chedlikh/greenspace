@@ -365,6 +365,32 @@ export const uploadCoverPhoto = async (username, file, token) => {
 
   return response.json();
 };
+// Fetch sites by societe ID
+export const fetchSitesBySocieteId = async (societeId, token) => {
+  if (!token) throw new Error("No token provided");
+
+  const response = await fetch(`${API_BASE_URL}/Site/societe/${societeId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Failed to fetch sites by societe:", errorData);
+    throw new Error(errorData.message || "Failed to fetch sites by societe");
+  }
+
+  return response.json();
+};
+
+export const useSitesBySocieteId = (societeId) => {
+  const token = useSelector((state) => state.auth.token);
+
+  return useQuery({
+    queryKey: ["sitesBySociete", societeId],
+    queryFn: () => fetchSitesBySocieteId(societeId, token),
+    enabled: !!societeId && !!token,
+  });
+};
 // Fetch all sites
 export const fetchSites = async (token) => {
   if (!token) throw new Error("No token provided");
@@ -535,6 +561,7 @@ export const useDeleteSite = (id) => {
     },
   });
 };
+
 // Assign users to poste
 export const assignUsersToPoste = async ({ posteId, usernames, token }) => {
   if (!token) throw new Error("No token provided");
@@ -1637,26 +1664,44 @@ const createSondage = async ({ sondageData, token }) => {
 
 // Update a sondage
 const updateSondage = async ({ id, sondageData, token }) => {
-  if (!token) throw new Error("No token provided");
-  
-  const response = await fetch(`${API_BASE_URL}/api/sondages/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(sondageData),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("Failed to update sondage:", errorData);
-    throw new Error(errorData.message || "Failed to update sondage");
-  }
-  
-  return response.json();
+    if (!id) {
+        throw new Error("Survey ID is required");
+    }
+    if (!token) {
+        throw new Error("No token provided");
+    }
+    
+    console.log("Sending PUT request with body:", JSON.stringify(sondageData));
+    
+    const response = await fetch(`${API_BASE_URL}/api/sondages/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(sondageData),
+    });
+    
+    if (!response.ok) {
+        let errorData;
+        try {
+            errorData = await response.json();
+        } catch (e) {
+            errorData = { message: response.statusText || "Failed to update sondage" };
+        }
+        console.error("Failed to update sondage:", errorData);
+        throw new Error(errorData.message || "Failed to update sondage");
+    }
+    
+    try {
+        return await response.json();
+    } catch (e) {
+        if (response.status === 200) {
+            return { success: true, id };
+        }
+        throw new Error("Unexpected end of JSON input");
+    }
 };
-
 // Delete a sondage
 const deleteSondage = async ({ id, token }) => {
   if (!token) throw new Error("No token provided");
@@ -1785,20 +1830,29 @@ export const useCreateSondage = () => {
   });
 };
 
-export const useUpdateSondage = (sondageId) => {
-  const token = useSelector((state) => state.auth.token);
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (sondageData) => updateSondage({ id: sondageId, sondageData, token }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sondage', sondageId] });
-      queryClient.invalidateQueries({ queryKey: ['sondages'] });
-      alert("Sondage updated successfully!");
-    },
-  });
+export const useUpdateSondage = () => {
+    const token = useSelector((state) => state.auth.token);
+    const queryClient = useQueryClient();
+    
+    return useMutation({
+        mutationFn: ({ id, sondageData }) => {
+            if (!id) {
+                throw new Error("Survey ID is required");
+            }
+            return updateSondage({ id, sondageData, token });
+        },
+        onSuccess: (data, variables) => {
+            const { id } = variables; // Extract id from mutation variables
+            queryClient.invalidateQueries({ queryKey: ['sondages'] });
+            queryClient.invalidateQueries({ queryKey: ['sondage', id] });
+            toast.success("Survey updated successfully!");
+        },
+        onError: (error) => {
+            console.error("Update error:", error);
+            toast.error(`Error: ${error.message}`);
+        }
+    });
 };
-
 export const useDeleteSondage = (sondageId) => {
   const token = useSelector((state) => state.auth.token);
   const queryClient = useQueryClient();
@@ -1869,6 +1923,157 @@ export const useUnassignServiceFromSondage = (sondageId) => {
     onError: (error) => {
       console.error('Failed to unassign service:', error.message);
       toast.error(`Error: ${error.message}`);
+    },
+  });
+};
+const fetchSondagesByServiceId = async (serviceId, token) => {
+  if (!token) throw new Error("No token provided");
+  const response = await fetch(`${API_BASE_URL}/api/sondages/service/${serviceId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch sondages for service");
+  }
+  return response.json();
+};
+
+export const useSondagesByServiceId = (serviceId) => {
+  return useQuery({
+    queryKey: ['sondages', serviceId],
+    queryFn: async () => {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8089';
+      const token = store.getState().auth.token;
+      const res = await fetch(`${API_BASE_URL}/sondages/service/${serviceId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Failed to fetch sondages for service ${serviceId}`);
+      return res.json();
+    },
+    enabled: !!serviceId,
+  });
+};
+
+// Request a password reset (user or admin)
+const requestPasswordReset = async ({ emailOrPhone, requestAdmin }) => {
+  if (!emailOrPhone) throw new Error('Email or phone number is required');
+
+  const response = await fetch(`${API_BASE_URL}/password-reset/request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ emailOrPhone, requestAdmin }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error('Failed to request password reset:', errorData);
+    throw new Error(errorData.message || 'Failed to request password reset');
+  }
+
+  return response.json();
+};
+
+// Reset password with token
+const resetPassword = async ({ token, newPassword }) => {
+  if (!token || !newPassword) throw new Error('Reset token and new password are required');
+
+  const response = await fetch(`${API_BASE_URL}/password-reset`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ token, newPassword }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error('Failed to reset password:', errorData);
+    throw new Error(errorData.message || 'Failed to reset password');
+  }
+
+  return response.json();
+};
+
+// Admin update user password
+const updateUserPassword = async ({ username, newPassword, token }) => {
+  if (!token) throw new Error('No token provided');
+  if (!username || !newPassword) throw new Error('Username and new password are required');
+
+  const response = await fetch(
+    `${API_BASE_URL}/admin_only/update-password?username=${encodeURIComponent(username)}&newPassword=${encodeURIComponent(newPassword)}`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error('Failed to update user password:', errorData);
+    throw new Error(errorData.message || 'Failed to update user password');
+  }
+
+  return response.json();
+};
+
+// React Query hooks
+
+// Hook to request a password reset (user or admin)
+export const useRequestPasswordReset = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ emailOrPhone, requestAdmin }) =>
+      requestPasswordReset({ emailOrPhone, requestAdmin }),
+    onSuccess: (data) => {
+      // No query invalidation needed, as this doesn't affect cached data
+      alert(data.message || 'Password reset request sent successfully!');
+    },
+    onError: (error) => {
+      console.error('Password reset request failed:', error);
+      alert(`Error: ${error.message}`);
+    },
+  });
+};
+
+// Hook to reset password with token
+export const useResetPassword = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ token, newPassword }) =>
+      resetPassword({ token, newPassword }),
+    onSuccess: (data) => {
+      // No query invalidation needed, as this doesn't affect cached data
+      alert(data.message || 'Password reset successfully!');
+    },
+    onError: (error) => {
+      console.error('Password reset failed:', error);
+      alert(`Error: ${error.message}`);
+    },
+  });
+};
+
+// Hook to update user password (admin only)
+export const useUpdateUserPassword = () => {
+  const token = useSelector((state) => state.auth.token);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ username, newPassword }) =>
+      updateUserPassword({ username, newPassword, token }),
+    onSuccess: (data) => {
+      // Invalidate user-related queries if applicable (e.g., user profile)
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      alert(data.message || 'Password updated successfully!');
+    },
+    onError: (error) => {
+      console.error('Update user password failed:', error);
+      alert(`Error: ${error.message}`);
     },
   });
 };

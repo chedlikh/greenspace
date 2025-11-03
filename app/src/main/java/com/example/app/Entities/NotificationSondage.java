@@ -17,6 +17,15 @@ public class NotificationSondage {
     private String message;
     private boolean isRead;
     private LocalDateTime createdAt;
+    private Long sondageId;
+
+    public Long getSondageId() {
+        return sondageId;
+    }
+
+    public void setSondageId(Long sondageId) {
+        this.sondageId = sondageId;
+    }
 
     @ManyToOne
     @JsonIgnore

@@ -78,4 +78,9 @@ public class SondageController {
         Set<Gservice> services = sondageService.getServicesBySondageId(sondageId);
         return new ResponseEntity<>(services, HttpStatus.OK);
     }
+    @GetMapping("/service/{serviceId}")
+    public ResponseEntity<List<Sondage>> getSondagesByServiceId(@PathVariable Long serviceId) {
+        List<Sondage> sondages = sondageService.getSondagesByServiceId(serviceId);
+        return new ResponseEntity<>(sondages, HttpStatus.OK);
+    }
 }

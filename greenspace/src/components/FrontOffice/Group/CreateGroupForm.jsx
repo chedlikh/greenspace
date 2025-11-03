@@ -21,6 +21,8 @@ const CreateGroupForm = ({ onSuccess }) => {
     };
 
     return (
+        <div className="main-content bg-gray-50 min-h-screen">
+
         <div className="bg-gradient-to-r from-white to-gray-50 rounded-2xl shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Create a New Group</h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -82,7 +84,9 @@ const CreateGroupForm = ({ onSuccess }) => {
                     </button>
                 </div>
             </form>
-        </div>
+        
+            </div>
+            </div>
     );
 };
 

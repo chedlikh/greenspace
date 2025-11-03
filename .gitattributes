@@ -1,0 +1,2 @@
+app/src/main/resources/models/facenet/*.pb filter=lfs diff=lfs merge=lfs -text
+app/src/main/resources/models/facenet/*.ckpt* filter=lfs diff=lfs merge=lfs -text

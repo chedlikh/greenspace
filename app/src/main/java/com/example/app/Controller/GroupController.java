@@ -8,6 +8,7 @@ import com.example.app.Entities.Publication;
 import com.example.app.Entities.User;
 import com.example.app.Mappers.GroupMapper;
 import com.example.app.Mappers.PublicationMapper;
+import com.example.app.Service.GroupMemberStats;
 import com.example.app.Service.IGroupService;
 import com.example.app.Service.IPublicationService;
 import com.example.app.Service.UserService;
@@ -396,5 +397,30 @@ public class GroupController {
                 .orElseThrow(() -> new EntityNotFoundException("Member settings not found for user: " + username));
 
         return ResponseEntity.ok(groupMapper.toSettingsDto(settings));
+    }
+    @GetMapping("/{groupId}/member/{username}/stats")
+    public ResponseEntity<GroupMemberStatsDTO> getMemberStats(
+            @PathVariable Long groupId,
+            @PathVariable String username) {
+
+        Group group = groupService.findById(groupId)
+                .orElseThrow(() -> new EntityNotFoundException("Group not found with id: " + groupId));
+
+        User member = (User) userService.loadUserByUsername(username);
+        GroupMemberStats stats = groupService.getMemberStats(groupId, member.getId());
+
+        GroupMemberStatsDTO dto = new GroupMemberStatsDTO();
+        dto.setUserId(stats.getUserId());
+        dto.setUsername(stats.getUsername());
+        dto.setFirstName(stats.getFirstName());
+        dto.setLastName(stats.getLastName());
+        dto.setPublicationCount(stats.getPublicationCount());
+        dto.setCommentCount(stats.getCommentCount());
+        dto.setReactionCount(stats.getReactionCount());
+        dto.setJoinDate(stats.getJoinDate());
+        dto.setLastCommentDate(stats.getLastCommentDate());
+        dto.setLastPublicationDate(stats.getLastPublicationDate());
+
+        return ResponseEntity.ok(dto);
     }
 }

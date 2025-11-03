@@ -12,6 +12,7 @@ const MediaGallery = ({ media }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mediaUrls, setMediaUrls] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [errors, setErrors] = useState({});
   const token = useSelector((state) => state.auth.token);
   const fetchedMedia = useRef(new Set());
 
@@ -28,10 +29,12 @@ const MediaGallery = ({ media }) => {
   const fetchMedia = async (fileUrl, mediaId) => {
     if (!fileUrl || !token) {
       console.warn('Missing fileUrl or token', { fileUrl, token, mediaId });
+      setErrors((prev) => ({ ...prev, [mediaId]: 'Missing file URL or token' }));
       return '';
     }
 
     try {
+      console.log(`Fetching media for ${mediaId}: ${fileUrl}`);
       const response = await fetch(fileUrl, {
         method: 'GET',
         headers: {
@@ -41,7 +44,12 @@ const MediaGallery = ({ media }) => {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch media: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('Content-Type');
+      if (!contentType || (!contentType.startsWith('image/') && !contentType.startsWith('video/'))) {
+        throw new Error(`Invalid content type: ${contentType}`);
       }
 
       const blob = await response.blob();
@@ -50,6 +58,7 @@ const MediaGallery = ({ media }) => {
       return blobUrl;
     } catch (error) {
       console.error(`Error fetching media for ${mediaId}:`, error);
+      setErrors((prev) => ({ ...prev, [mediaId]: error.message }));
       return '';
     }
   };
@@ -64,7 +73,7 @@ const MediaGallery = ({ media }) => {
         if (mediaItem.fileUrl && !fetchedMedia.current.has(mediaItem.id)) {
           fetchedMedia.current.add(mediaItem.id);
           fetchPromises.push(
-            fetchMedia(mediaItem.fileUrl, mediaItem.id).then(blobUrl => {
+            fetchMedia(mediaItem.fileUrl, mediaItem.id).then((blobUrl) => {
               if (blobUrl) {
                 newMediaUrls[mediaItem.id] = blobUrl;
               }
@@ -74,8 +83,7 @@ const MediaGallery = ({ media }) => {
       }
 
       await Promise.all(fetchPromises);
-      
-      setMediaUrls(prev => ({ ...prev, ...newMediaUrls }));
+      setMediaUrls((prev) => ({ ...prev, ...newMediaUrls }));
       setIsLoading(false);
     };
 
@@ -106,9 +114,11 @@ const MediaGallery = ({ media }) => {
   }, [isModalOpen]);
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-48">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-    </div>;
+    return (
+      <div className="flex justify-center items-center h-48">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
   }
 
   if (!media || media.length === 0) return <p className="text-gray-500">No media available</p>;
@@ -117,8 +127,23 @@ const MediaGallery = ({ media }) => {
     return mediaUrls[mediaItem.id] || '';
   };
 
-  const handleMediaError = (e) => {
-    console.error('Media failed to load:', e);
+  const getVideoMimeType = (mediaItem) => {
+    const extension = mediaItem.fileExtension?.toLowerCase();
+    switch (extension) {
+      case 'mp4':
+        return 'video/mp4';
+      case 'webm':
+        return 'video/webm';
+      case 'ogg':
+        return 'video/ogg';
+      default:
+        console.warn(`Unknown video extension: ${extension}`);
+        return 'video/mp4';
+    }
+  };
+
+  const handleMediaError = (e, mediaItem) => {
+    console.error(`Media failed to load for ${mediaItem.id}:`, e);
     e.target.style.display = 'none';
     if (e.target.nextSibling) {
       e.target.nextSibling.style.display = 'block';
@@ -128,11 +153,11 @@ const MediaGallery = ({ media }) => {
   if (media.length === 1) {
     const mediaItem = media[0];
     const mediaUrl = getMediaUrl(mediaItem);
-    
-    if (!mediaUrl) {
-      return <p className="text-gray-500">Loading media...</p>;
+
+    if (!mediaUrl || errors[mediaItem.id]) {
+      return <p className="text-red-600">Error loading media: {errors[mediaItem.id] || 'Unknown error'}</p>;
     }
-    
+
     return (
       <>
         {mediaItem.mediaType === 'IMAGE' ? (
@@ -142,7 +167,7 @@ const MediaGallery = ({ media }) => {
               alt={mediaItem.caption || 'Publication media'}
               className="w-full h-auto max-h-[500px] object-contain rounded-2xl cursor-pointer shadow-md"
               onClick={() => openModal(mediaItem)}
-              onError={handleMediaError}
+              onError={(e) => handleMediaError(e, mediaItem)}
             />
             <p className="text-gray-500 hidden">Failed to load image</p>
           </>
@@ -151,11 +176,11 @@ const MediaGallery = ({ media }) => {
             <video
               controls
               className="w-full h-auto max-h-[500px] rounded-2xl shadow-md"
-              onError={handleMediaError}
+              onError={(e) => handleMediaError(e, mediaItem)}
             >
               <source
                 src={mediaUrl}
-                type={`video/${mediaItem.fileExtension || 'mp4'}`}
+                type={getVideoMimeType(mediaItem)}
               />
               Your browser does not support the video tag.
             </video>
@@ -195,7 +220,7 @@ const MediaGallery = ({ media }) => {
                 >
                   <source
                     src={getMediaUrl(selectedMedia)}
-                    type={`video/${selectedMedia.fileExtension || 'mp4'}`}
+                    type={getVideoMimeType(selectedMedia)}
                   />
                   Your browser does not support the video tag.
                 </video>
@@ -220,8 +245,16 @@ const MediaGallery = ({ media }) => {
       >
         {media.map((mediaItem) => {
           const mediaUrl = getMediaUrl(mediaItem);
-          if (!mediaUrl) return null;
-          
+          if (!mediaUrl || errors[mediaItem.id]) {
+            return (
+              <SwiperSlide key={mediaItem.id}>
+                <p className="text-red-600 text-center py-10">
+                  Error loading media: {errors[mediaItem.id] || 'Unknown error'}
+                </p>
+              </SwiperSlide>
+            );
+          }
+
           return (
             <SwiperSlide key={mediaItem.id}>
               <div className="swiper-zoom-container">
@@ -232,7 +265,7 @@ const MediaGallery = ({ media }) => {
                       alt={mediaItem.caption || 'Publication media'}
                       className="w-full h-[500px] object-cover cursor-pointer rounded-2xl"
                       onClick={() => openModal(mediaItem)}
-                      onError={handleMediaError}
+                      onError={(e) => handleMediaError(e, mediaItem)}
                     />
                     <p className="text-gray-500 hidden">Failed to load image</p>
                   </>
@@ -241,11 +274,11 @@ const MediaGallery = ({ media }) => {
                     <video
                       controls
                       className="w-full h-[500px] object-cover rounded-2xl"
-                      onError={handleMediaError}
+                      onError={(e) => handleMediaError(e, mediaItem)}
                     >
                       <source
                         src={mediaUrl}
-                        type={`video/${mediaItem.fileExtension || 'mp4'}`}
+                        type={getVideoMimeType(mediaItem)}
                       />
                       Your browser does not support the video tag.
                     </video>
@@ -291,7 +324,7 @@ const MediaGallery = ({ media }) => {
               >
                 <source
                   src={getMediaUrl(selectedMedia)}
-                  type={`video/${selectedMedia.fileExtension || 'mp4'}`}
+                  type={getVideoMimeType(selectedMedia)}
                 />
                 Your browser does not support the video tag.
               </video>

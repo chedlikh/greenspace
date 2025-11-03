@@ -65,6 +65,10 @@ public class WebSocketSecurityConfig implements WebSocketMessageBrokerConfigurer
                                     accessor.setUser(authToken);
                                     SecurityContextHolder.getContext().setAuthentication(authToken);
                                     logger.debug("WebSocket authenticated user: {}", username);
+                                    // Dans la méthode preSend, après avoir authentifié l'utilisateur
+                                    logger.info("WebSocket user authenticated: " + username + " with principal: " +
+                                            (accessor.getUser() != null ? accessor.getUser().getName() : "null"));
+
                                 }
                             }
                         }

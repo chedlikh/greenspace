@@ -124,13 +124,9 @@ const getUserCommentReaction = async ({ commentId, token }) => {
     },
   });
 
-  if (!response.ok && response.status !== 404) {
+  if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || 'Failed to get user reaction');
-  }
-
-  if (response.status === 404) {
-    return null;
   }
 
   return response.json();
@@ -268,6 +264,9 @@ export const useUserPublicationReaction = (publicationId) => {
         user: {
           id: data.user?.id,
           username: data.user?.username,
+          firstname: data.user?.firstname,
+          lastName: data.user?.lastName,
+          photoProfile: data.user?.photoProfile,
         },
         publicationId: data.publicationId,
       };
@@ -283,15 +282,18 @@ export const useUserCommentReaction = (commentId) => {
     queryFn: () => getUserCommentReaction({ commentId, token }),
     enabled: !!commentId && !!token,
     select: (data) =>
-      data
+      data.reaction
         ? {
-            id: data.id,
-            reactionType: data.reactionType,
+            id: data.reaction.id,
+            reactionType: data.reaction.reactionType,
             user: {
-              id: data.user?.id,
-              username: data.user?.username,
+              id: data.reaction.user?.id,
+              username: data.reaction.user?.username,
+              firstname: data.reaction.user?.firstname,
+              lastName: data.reaction.user?.lastName,
+              photoProfile: data.reaction.user?.photoProfile,
             },
-            commentId: data.commentId,
+            commentId: data.reaction.commentId,
           }
         : null,
   });
@@ -311,6 +313,9 @@ export const usePublicationReactions = (publicationId) => {
         user: {
           id: reaction.user?.id,
           username: reaction.user?.username,
+          firstname: reaction.user?.firstname,
+          lastName: reaction.user?.lastName,
+          photoProfile: reaction.user?.photoProfile,
         },
         publicationId: reaction.publicationId,
       })),
@@ -331,6 +336,9 @@ export const useCommentReactions = (commentId) => {
         user: {
           id: reaction.user?.id,
           username: reaction.user?.username,
+          firstname: reaction.user?.firstname,
+          lastName: reaction.user?.lastName,
+          photoProfile: reaction.user?.photoProfile,
         },
         commentId: reaction.commentId,
       })),

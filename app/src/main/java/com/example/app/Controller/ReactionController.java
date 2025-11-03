@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -117,15 +118,28 @@ public class ReactionController {
     }
 
     @GetMapping("/comment/{commentId}/user")
-    public ResponseEntity<ReactionDTO> getUserReactionForComment(
+    public ResponseEntity<?> getUserReactionForComment(
             @PathVariable Long commentId) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
 
-        return reactionService.findByUserIdAndCommentId(currentUser.getId(), commentId)
-                .map(reaction -> new ResponseEntity<>(reactionMapper.toDto(reaction), HttpStatus.OK))
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        Optional<Reaction> reactionOptional = reactionService.findByUserIdAndCommentId(currentUser.getId(), commentId);
+
+        if (reactionOptional.isPresent()) {
+            // User has a reaction - return it with 200 OK and exists=true flag
+            ReactionDTO dto = reactionMapper.toDto(reactionOptional.get());
+            Map<String, Object> response = new HashMap<>();
+            response.put("reaction", dto);
+            response.put("exists", true);
+            return ResponseEntity.ok(response);
+        } else {
+            // User has no reaction - return a JSON object with null reaction and exists=false
+            Map<String, Object> response = new HashMap<>();
+            response.put("reaction", null);
+            response.put("exists", false);
+            return ResponseEntity.ok(response);
+        }
     }
 
     @DeleteMapping("/{id}")

@@ -5,13 +5,13 @@ import { useUploadMultipleMedia } from '../../../services/media';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import EmojiPicker from '@emoji-mart/react';
-import { Image, Video, Smile, Globe } from 'feather-icons-react';
+import { Image, Video, Smile, Globe, Edit3, Camera, AlertCircle, Lock, Bookmark, AlertOctagon } from 'feather-icons-react';
 import { toast } from 'react-toastify';
 import LoadingSpinner from './../LoadingSpinner';
 
 const CreatePublicationForm = ({ targetUsername, groupId, onSuccess }) => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
-    const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm();
   const { mutate: createPublication, isPending: isCreating } = useCreatePublication();
   const { mutate: createCrossUserPublication, isPending: isCreatingCross } = useCreateCrossUserPublication();
   const { mutate: createGroupPublication, isPending: isCreatingGroup } = useCreateGroupPublication();
@@ -23,7 +23,10 @@ const CreatePublicationForm = ({ targetUsername, groupId, onSuccess }) => {
   const [feeling, setFeeling] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showFeelingMenu, setShowFeelingMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const fileInputRef = useRef(null);
+  const emojiButtonRef = useRef(null);
 
   const isCrossUserPost = !!targetUsername && typeof targetUsername === 'string' && targetUsername.trim() !== '';
   const isGroupPost = !!groupId;
@@ -69,11 +72,13 @@ const CreatePublicationForm = ({ targetUsername, groupId, onSuccess }) => {
                 captions,
               },
               {
-                onSuccess: () => {
+                onSuccess: (response) => {
+                  console.log('Media upload response:', response);
                   resetForm();
                   toast.success('Publication created successfully');
                 },
                 onError: (error) => {
+                  console.error('Media upload error:', error);
                   toast.error(`Failed to upload media: ${error.message}`);
                 },
               }
@@ -102,6 +107,8 @@ const CreatePublicationForm = ({ targetUsername, groupId, onSuccess }) => {
     setFeeling('');
     setShowEmojiPicker(false);
     setShowFeelingMenu(false);
+    setShowMoreMenu(false);
+    setIsExpanded(false);
     if (onSuccess) onSuccess();
   };
 
@@ -112,14 +119,22 @@ const CreatePublicationForm = ({ targetUsername, groupId, onSuccess }) => {
         toast.error('Maximum 10 files allowed');
         return;
       }
-      const validFiles = filesArray.filter((file) =>
-        file.type.startsWith('image/') || file.type.startsWith('video/')
-      );
+      const validFiles = filesArray.filter((file) => {
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        const isValid = isImage || isVideo;
+        if (!isValid) {
+          console.warn(`Invalid file type: ${file.type}`);
+        }
+        return isValid;
+      });
       if (validFiles.length !== filesArray.length) {
         toast.error('Only image and video files are allowed');
       }
-      setFiles(validFiles);
-      setCaptions(new Array(validFiles.length).fill(''));
+      if (validFiles.length > 0) {
+        setFiles(validFiles);
+        setCaptions(new Array(validFiles.length).fill(''));
+      }
     }
   };
 
@@ -143,191 +158,221 @@ const CreatePublicationForm = ({ targetUsername, groupId, onSuccess }) => {
     fileInputRef.current.click();
   };
 
-  return (
-    <div className="bg-gradient-to-r from-white to-gray-50 rounded-2xl shadow-lg p-6 mb-8">
-      <div className="flex items-start space-x-4 mb-4">
-        <img
-          src={user?.photoProfile ? `${BASE_URL}/images/${user.photoProfile}` : '/default-avatar.png'}
-          alt={user?.firstname && user?.lastName ? `${user.firstname} ${user.lastName}` : user?.username || 'Anonymous User'}
-          className="w-12 h-12 rounded-full object-cover shadow-sm"
-        />
-        <div className="flex-1">
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <textarea
-              {...register('content', { required: 'Content is required' })}
-              placeholder={isGroupPost ? "What's happening in the group?" : isCrossUserPost ? `Write something on ${targetUsername}'s profile...` : "What's on your mind?"}
-              className="w-full p-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none transition-all shadow-sm"
-              rows={4}
-            />
-            {errors.content && (
-              <p className="text-red-600 text-sm mt-1">{errors.content.message}</p>
-            )}
+  const isVideoFile = (file) => file.type.startsWith('video/');
 
+  return (
+    <div className="card w-100 shadow-xss rounded-xxl border-0 ps-4 pt-4 pe-4 pb-3 mb-3">
+      <div className="card-body p-0">
+        <a href="#" className="font-xssss fw-600 text-grey-500 card-body p-0 d-flex align-items-center">
+          <i className="btn-round-sm font-xs text-primary feather-edit-3 me-2 bg-greylight"></i>
+          Create Post
+        </a>
+      </div>
+      
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="card-body p-0 mt-3 position-relative">
+          <figure className="avatar position-absolute ms-2 mt-1 top-5">
+            <img 
+              src={user?.photoProfile ? `${BASE_URL}/images/${user.photoProfile}` : '/default-avatar.png'} 
+              alt={user?.firstname && user?.lastName ? `${user.firstname} ${user.lastName}` : user?.username || 'Anonymous User'}
+              className="shadow-sm rounded-circle w30"
+            />
+          </figure>
+          
+          {/* Emoji Picker Button positioned similar to avatar */}
+          <div className="position-absolute" style={{ right: '10px', top: '10px' }}>
+            <button
+              type="button"
+              ref={emojiButtonRef}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEmojiPicker(!showEmojiPicker);
+              }}
+              className="btn-round-xs bg-greylight text-grey-500"
+            >
+              <Smile size={16} />
+            </button>
+            
+            {showEmojiPicker && (
+              <div className="position-absolute" style={{ right: 0, bottom: '100%', zIndex: 1000 }}>
+                <EmojiPicker 
+                  onEmojiSelect={handleEmojiSelect}
+                  onClickOutside={() => setShowEmojiPicker(false)}
+                  theme="light"
+                />
+              </div>
+            )}
+          </div>
+          
+          <textarea
+            {...register('content', { required: 'Content is required' })}
+            onClick={() => setIsExpanded(true)}
+            placeholder={isGroupPost ? "What's happening in the group?" : isCrossUserPost ? `Write something on ${targetUsername}'s profile...` : "What's on your mind?"}
+            className="h100 bor-0 w-100 rounded-xxl p-2 ps-5 pe-5 font-xssss text-grey-500 fw-500 border-light-md theme-dark-bg"
+            cols="30"
+            rows="10"
+          />
+          {errors.content && (
+            <p className="text-red-600 text-xs mt-1">{errors.content.message}</p>
+          )}
+        </div>
+
+        {isExpanded && (
+          <>
             {files.length > 0 && (
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-2">
                 {files.map((file, index) => (
-                  <div key={index} className="flex items-center space-x-3 bg-gray-100 p-3 rounded-lg">
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`Preview ${index}`}
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
+                  <div key={index} className="flex items-center space-x-2 bg-gray-100 p-2 rounded-lg">
+                    {isVideoFile(file) ? (
+                      <video
+                        controls
+                        src={URL.createObjectURL(file)}
+                        className="w-16 h-16 object-cover rounded-lg"
+                        onError={(e) => console.error('Video preview error:', e)}
+                      />
+                    ) : (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Preview ${index}`}
+                        className="w-16 h-16 object-cover rounded-lg"
+                        onError={(e) => console.error('Image preview error:', e)}
+                      />
+                    )}
                     <input
                       type="text"
                       placeholder="Add a caption..."
                       value={captions[index] || ''}
                       onChange={(e) => handleCaptionChange(index, e.target.value)}
-                      className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                      className="flex-1 p-1 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFiles(files.filter((_, i) => i !== index));
+                        setCaptions(captions.filter((_, i) => i !== index));
+                      }}
+                      className="text-red-500 hover:text-red-600 text-xs"
+                    >
+                      Remove
+                    </button>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="mt-4">
+            <div className="card-body d-flex p-0 mt-0">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); triggerFileInput(); }}
+                className="d-flex align-items-center font-xssss fw-600 ls-1 text-grey-700 text-dark pe-4"
+              >
+                <i className="font-md text-danger feather-video me-2"></i>
+                <span className="d-none-xs">Live Video</span>
+              </button>
               <input
-                type="text"
-                placeholder="Add location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full p-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/*,video/mp4,video/webm"
+                multiple
               />
-            </div>
 
-            <div className="flex justify-between items-center mt-4">
-              <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); triggerFileInput(); }}
+                className="d-flex align-items-center font-xssss fw-600 ls-1 text-grey-700 text-dark pe-4"
+              >
+                <i className="font-md text-success feather-image me-2"></i>
+                <span className="d-none-xs">Photo/Video</span>
+              </button>
+
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={triggerFileInput}
-                  className="p-2 text-gray-600 hover:text-indigo-600 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setShowFeelingMenu(!showFeelingMenu); }}
+                  className="d-flex align-items-center font-xssss fw-600 ls-1 text-grey-700 text-dark pe-4"
                 >
-                  <Image size={24} className="inline" />
-                  <Video size={24} className="inline ml-1" />
+                  <i className="font-md text-warning feather-camera me-2"></i>
+                  <span className="d-none-xs">Feeling/Activity</span>
                 </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept="image/*,video/*"
-                  multiple
-                />
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 text-gray-600 hover:text-indigo-600 transition-colors"
-                  >
-                    <Smile size={24} />
-                  </button>
-                  {showEmojiPicker && (
-                    <div className="absolute z-50 bottom-full left-0 mb-2">
-                      <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowFeelingMenu(!showFeelingMenu)}
-                    className="p-2 text-gray-600 hover:text-indigo-600 transition-colors"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
+                {showFeelingMenu && (
+                  <div className="absolute z-50 bottom-full left-0 mb-2 w-52 bg-white rounded-lg shadow-xl py-2 animate-fadeIn">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleFeelingSelect('happy'); }}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </button>
-                  {feeling && (
-                    <span className="absolute -top-2 -right-2 bg-indigo-600 text-white text-xs px-2 py-1 rounded-full">
-                      {feeling}
-                    </span>
-                  )}
-                  {showFeelingMenu && (
-                    <div className="absolute z-50 mt-2 w-52 bg-white rounded-lg shadow-xl py-2 animate-fadeIn">
+                      😊 Happy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleFeelingSelect('sad'); }}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
+                    >
+                      😢 Sad
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleFeelingSelect('excited'); }}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
+                    >
+                      🤩 Excited
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleFeelingSelect('angry'); }}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
+                    >
+                      😠 Angry
+                    </button>
+                    {feeling && (
                       <button
                         type="button"
-                        onClick={() => handleFeelingSelect('happy')}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
+                        onClick={(e) => { e.stopPropagation(); handleFeelingSelect(''); }}
+                        className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors w-full text-left"
                       >
-                        😊 Happy
+                        Remove feeling
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleFeelingSelect('sad')}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
-                      >
-                        😢 Sad
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleFeelingSelect('excited')}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
-                      >
-                        🤩 Excited
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleFeelingSelect('angry')}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-full text-left"
-                      >
-                        😠 Angry
-                      </button>
-                      {feeling && (
-                        <button
-                          type="button"
-                          onClick={() => handleFeelingSelect('')}
-                          className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors w-full text-left"
-                        >
-                          Remove feeling
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <select
-                    {...register('privacyLevel', { required: true })}
-                    className="appearance-none pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all"
-                    defaultValue="PUBLIC"
-                  >
-                    <option value="PUBLIC">Public</option>
-                    <option value="FRIENDS">Friends</option>
-                    <option value="PRIVATE">Only me</option>
-                  </select>
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Globe size={18} className="text-gray-400" />
+                    )}
                   </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isCreating || isUploading || isCreatingCross || isCreatingGroup}
-                  className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl hover:from-indigo-700 hover:to-blue-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 transition-all"
-                >
-                  {(isCreating || isUploading || isCreatingCross || isCreatingGroup) ? <LoadingSpinner size="sm" /> : 'Post'}
-                </button>
+                )}
               </div>
+
+              
             </div>
-          </form>
-        </div>
-      </div>
+
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <div className="relative">
+                <select
+                  {...register('privacyLevel', { required: true })}
+                  onClick={(e) => e.stopPropagation()}
+                  className="appearance-none pl-8 pr-3 py-1 bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs"
+                  defaultValue="PUBLIC"
+                >
+                  <option value="PUBLIC">Public</option>
+                  <option value="FRIENDS">Friends</option>
+                  <option value="PRIVATE">Only me</option>
+                </select>
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                  <Globe size={14} className="text-gray-400" />
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                disabled={isCreating || isUploading || isCreatingCross || isCreatingGroup}
+                className="px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-1 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-50 text-xs"
+              >
+                {(isCreating || isUploading || isCreatingCross || isCreatingGroup) ? <LoadingSpinner size="xs" /> : 'Post'}
+              </button>
+            </div>
+          </>
+        )}
+      </form>
     </div>
   );
 };
+
 
 export default CreatePublicationForm;

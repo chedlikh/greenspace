@@ -2,7 +2,6 @@ package com.example.app.Service;
 
 import com.example.app.Entities.NotificationSondage;
 import com.example.app.Entities.User;
-
 import com.example.app.Repository.NotificationSondageRepo;
 import com.example.app.Repository.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +28,7 @@ public class NotificationService implements INotificationService {
         this.userRepo = userRepo;
         this.messagingTemplate = messagingTemplate;
     }
+
     @Override
     public void createSondageNotification(String username, String message, String type, Long sondageId) {
         User user = userRepo.findByUsername(username)
@@ -39,6 +39,7 @@ public class NotificationService implements INotificationService {
         notification.setRead(false);
         notification.setCreatedAt(LocalDateTime.now());
         notification.setRecipient(user);
+        notification.setSondageId(sondageId); // Set sondageId
 
         notification = notificationRepository.save(notification);
 
@@ -52,7 +53,6 @@ public class NotificationService implements INotificationService {
         );
     }
 
-
     @Override
     public void createSondageNotification(Long userId, String message, String type, Long sondageId) {
         User user = userRepo.findById(userId)
@@ -63,10 +63,10 @@ public class NotificationService implements INotificationService {
         notification.setRead(false);
         notification.setCreatedAt(LocalDateTime.now());
         notification.setRecipient(user);
+        notification.setSondageId(sondageId); // Set sondageId
 
         notification = notificationRepository.save(notification);
 
-        // Send notification via WebSocket
         messagingTemplate.convertAndSendToUser(
                 user.getUsername(),
                 "/queue/notifications-update",
@@ -90,6 +90,7 @@ public class NotificationService implements INotificationService {
             notificationRepository.save(notification);
         });
     }
+
     @Override
     public void markAllAsRead(String username) {
         List<NotificationSondage> unreadNotifications = getUnreadNotifications(username);

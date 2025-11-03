@@ -23,4 +23,6 @@ public interface ISondageService {
     Sondage unassignServiceFromSondage(Long sondageId, Long serviceId);
 
     Set<Gservice> getServicesBySondageId(Long sondageId);
+    List<Sondage> getSondagesByServiceId(Long serviceId);
+
 }

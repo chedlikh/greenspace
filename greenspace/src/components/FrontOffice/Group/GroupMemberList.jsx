@@ -8,22 +8,32 @@ import {
   fetchImageWithToken,
   useAuthToken,
 } from '../../../services/group';
-import MemberStatsModal from './MemberStatsModal';
 import LoadingSpinner from '../../FrontOffice/LoadingSpinner';
 import ErrorMessage from '../ErrorMessage';
 import { toast } from 'react-toastify';
-import { useRemoveGroupMember, useUpdateMemberSettings } from '../../../services/group';
+import { useRemoveGroupMember, useUpdateMemberSettings, useMemberStats } from '../../../services/group';
+
+// Custom component for profile photos with proper URL handling
+const ProfilePhoto = ({ photoUrl, username, className = "w75 h75 rounded-circle object-cover border-2 border-grey-200" }) => {
+  return (
+    <img
+      src={photoUrl || '/default-avatar.png'}
+      alt={username || "User"}
+      className={className}
+      onError={(e) => { e.target.src = '/default-avatar.png'; }}
+    />
+  );
+};
 
 const GroupMemberList = ({ groupId, isAdmin, groupMembers }) => {
   const { id } = useParams();
   const groupIdToUse = groupId || id;
   const token = useAuthToken();
-  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [page, setPage] = useState(0);
   const [size] = useState(10);
   const [sortBy, setSortBy] = useState('publicationCount');
   const [direction, setDirection] = useState('desc');
-  const [selectedMember, setSelectedMember] = useState(null);
   const [memberPhotoUrls, setMemberPhotoUrls] = useState({});
   const [requestPhotoUrls, setRequestPhotoUrls] = useState({});
 
@@ -40,59 +50,61 @@ const GroupMemberList = ({ groupId, isAdmin, groupMembers }) => {
   const removeMemberMutation = useRemoveGroupMember();
   const updateSettingsMutation = useUpdateMemberSettings();
 
-  console.log('GroupMemberList data:', {
-    top5Members,
-    allMembers,
-    requests,
-    groupMembers,
-    groupIdToUse,
-    isAdmin,
-    memberCount: allMembers?.totalElements || top5Members?.length || groupMembers?.length || 0
-  });
-
+  // Fetch member photos
   useEffect(() => {
     if (!token) return;
 
     const fetchMemberPhotos = async () => {
       const newPhotoUrls = {};
-      const members = showAllMembers
-        ? (allMembers?.content?.length > 0 ? allMembers.content : groupMembers || [])
-        : (top5Members?.length > 0 ? top5Members : groupMembers || []);
+      const members = allMembers?.content?.length > 0 ? allMembers.content : groupMembers || [];
+      
       for (const member of members) {
-        if (member.photoProfile) {
-          newPhotoUrls[member.userId || member.id] = await fetchImageWithToken(member.photoProfile, token);
+        const userId = member.userId || member.id;
+        if (member.photoProfile && userId) {
+          try {
+            newPhotoUrls[userId] = await fetchImageWithToken(member.photoProfile, token);
+          } catch (error) {
+            console.error(`Error fetching image for user ${userId}:`, error);
+          }
         }
       }
-      setMemberPhotoUrls(newPhotoUrls);
+      setMemberPhotoUrls(prev => ({ ...prev, ...newPhotoUrls }));
     };
 
     fetchMemberPhotos();
 
     return () => {
+      // Clean up blob URLs
       Object.values(memberPhotoUrls).forEach((url) => {
         if (url && url.startsWith('blob:')) {
           URL.revokeObjectURL(url);
         }
       });
     };
-  }, [top5Members, allMembers, groupMembers, showAllMembers, token]);
+  }, [allMembers, groupMembers, token]);
 
+  // Fetch request photos
   useEffect(() => {
     if (!requests || !token || !isAdmin) return;
 
     const fetchRequestPhotos = async () => {
       const newPhotoUrls = {};
       for (const request of requests) {
-        if (request.photoProfile) {
-          newPhotoUrls[request.userId] = await fetchImageWithToken(request.photoProfile, token);
+        if (request.photoProfile && request.userId) {
+          try {
+            newPhotoUrls[request.userId] = await fetchImageWithToken(request.photoProfile, token);
+          } catch (error) {
+            console.error(`Error fetching image for request ${request.userId}:`, error);
+          }
         }
       }
-      setRequestPhotoUrls(newPhotoUrls);
+      setRequestPhotoUrls(prev => ({ ...prev, ...newPhotoUrls }));
     };
 
     fetchRequestPhotos();
 
     return () => {
+      // Clean up blob URLs
       Object.values(requestPhotoUrls).forEach((url) => {
         if (url && url.startsWith('blob:')) {
           URL.revokeObjectURL(url);
@@ -161,295 +173,210 @@ const GroupMemberList = ({ groupId, isAdmin, groupMembers }) => {
 
   const renderMedal = (index) => {
     if (sortBy !== 'joinDate' && direction === 'desc') {
-      if (index === 0) return <span className="text-yellow-500">🥇</span>;
-      if (index === 1) return <span className="text-gray-400">🥈</span>;
-      if (index === 2) return <span className="text-amber-600">🥉</span>;
+      if (index === 0) return <span className="font-xsss text-grey-900">🥇</span>;
+      if (index === 1) return <span className="font-xsss text-grey-900">🥈</span>;
+      if (index === 2) return <span className="font-xsss text-grey-900">🥉</span>;
     }
     return null;
   };
 
   if (isTop5Loading || isRequestsLoading) return <LoadingSpinner />;
   if (isTop5Error) return <ErrorMessage message={top5Error.message} />;
-  if (isAllError && showAllMembers) return <ErrorMessage message={allError.message} />;
+  if (isAllError && showMembersModal) return <ErrorMessage message={allError.message} />;
   if (isRequestsError && isAdmin) return <ErrorMessage message={requestsError.message} />;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">
-        {showAllMembers ? 'All Members' : 'Top 5 Members'} ({allMembers?.totalElements || top5Members?.length || groupMembers?.length || 0})
+    <div className="card w-100 shadow-xss rounded-xxl border-0 p-4 mb-3">
+      <h2 className="fw-700 text-grey-900 font-xsss mb-3">
+        Group Members ({allMembers?.totalElements || top5Members?.length || groupMembers?.length || 0})
       </h2>
 
-      {!showAllMembers ? (
-        <>
-          <ul className="space-y-3">
-            {top5Members && top5Members.length > 0 ? (
-              top5Members.map((member, index) => (
-                <li
-                  key={member.userId}
-                  className="flex items-center space-x-3 cursor-pointer"
-                  onClick={() => setSelectedMember(member)}
-                >
-                  <img
-                    src={memberPhotoUrls[member.userId] || '/default-avatar.png'}
-                    alt={member.username}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex items-center">
-                    {renderMedal(index)}
-                    <span className="ml-2 text-gray-700">
-                      {member.firstName} {member.lastName} (@{member.username})
-                    </span>
-                    {member.userId === groupIdToUse.adminId && (
-                      <span className="ml-2 text-sm text-indigo-600">(Admin)</span>
-                    )}
-                  </div>
-                </li>
-              ))
-            ) : groupMembers && groupMembers.length > 0 ? (
-              groupMembers.slice(0, 5).map((member, index) => (
-                <li
-                  key={member.id}
-                  className="flex items-center space-x-3 cursor-pointer"
-                  onClick={() => setSelectedMember({ ...member, userId: member.id })}
-                >
-                  <img
-                    src={memberPhotoUrls[member.id] || '/default-avatar.png'}
-                    alt={member.username}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex items-center">
-                    {renderMedal(index)}
-                    <span className="ml-2 text-gray-700">
-                      {member.firstname} {member.lastName} (@{member.username})
-                    </span>
-                    {member.id === groupIdToUse.adminId && (
-                      <span className="ml-2 text-sm text-indigo-600">(Admin)</span>
-                    )}
-                  </div>
-                </li>
-              ))
-            ) : (
-              <li className="text-gray-500">No top members found.</li>
-            )}
-          </ul>
-          <button
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            onClick={() => setShowAllMembers(true)}
-          >
-            View All Members
-          </button>
-        </>
-      ) : (
-        <>
-          <div className="flex space-x-4 mb-4">
-            <div>
-              <label className="mr-2 text-gray-700">Sort By:</label>
-              <select
-                value={sortBy}
-                onChange={handleSortChange}
-                className="p-2 border rounded-lg"
-              >
-                <option value="publicationCount">Publications</option>
-                <option value="commentCount">Comments</option>
-                <option value="reactionCount">Reactions</option>
-                <option value="joinDate">Join Date</option>
-              </select>
-            </div>
-            <div>
-              <label className="mr-2 text-gray-700">Direction:</label>
-              <select
-                value={direction}
-                onChange={handleDirectionChange}
-                className="p-2 border rounded-lg"
-              >
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
-            </div>
-          </div>
-          <ul className="space-y-3">
-            {isAllLoading ? (
-              <LoadingSpinner />
-            ) : allMembers && allMembers.content && allMembers.content.length > 0 ? (
-              allMembers.content.map((member, index) => (
-                <li
-                  key={member.userId}
-                  className="flex items-center justify-between p-3 bg-gray-100 rounded-lg"
-                >
-                  <div
-                    className="flex items-center cursor-pointer"
-                    onClick={() => setSelectedMember(member)}
-                  >
-                    <img
-                      src={memberPhotoUrls[member.userId] || '/default-avatar.png'}
-                      alt={member.username}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    <div className="flex items-center ml-3">
-                      {renderMedal(index)}
-                      <span className="ml-2 text-gray-700">
-                        {member.firstName} {member.lastName} (@{member.username})
-                      </span>
-                      {member.userId === groupIdToUse.adminId && (
-                        <span className="ml-2 text-sm text-indigo-600">(Admin)</span>
-                      )}
-                    </div>
-                  </div>
-                  {isAdmin && member.userId !== groupIdToUse.adminId && (
-                    <div className="flex items-center space-x-2">
-                      <label className="flex items-center text-sm">
-                        <input
-                          type="checkbox"
-                          checked={member.canPost}
-                          onChange={(e) =>
-                            handleUpdateSettings(member.username, e.target.checked, member.canComment)
-                          }
-                          className="mr-1"
-                        />
-                        Post
-                      </label>
-                      <label className="flex items-center text-sm">
-                        <input
-                          type="checkbox"
-                          checked={member.canComment}
-                          onChange={(e) =>
-                            handleUpdateSettings(member.username, member.canPost, e.target.checked)
-                          }
-                          className="mr-1"
-                        />
-                        Comment
-                      </label>
-                      <button
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                        onClick={() => handleRemoveMember(member.username)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ))
-            ) : groupMembers && groupMembers.length > 0 ? (
-              groupMembers.map((member, index) => (
-                <li
-                  key={member.id}
-                  className="flex items-center justify-between p-3 bg-gray-100 rounded-lg"
-                >
-                  <div
-                    className="flex items-center cursor-pointer"
-                    onClick={() => setSelectedMember({ ...member, userId: member.id })}
-                  >
-                    <img
-                      src={memberPhotoUrls[member.id] || '/default-avatar.png'}
-                      alt={member.username}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    <div className="flex items-center ml-3">
-                      {renderMedal(index)}
-                      <span className="ml-2 text-gray-700">
-                        {member.firstname} {member.lastName} (@{member.username})
-                      </span>
-                      {member.id === groupIdToUse.adminId && (
-                        <span className="ml-2 text-sm text-indigo-600">(Admin)</span>
-                      )}
-                    </div>
-                  </div>
-                  {isAdmin && member.id !== groupIdToUse.adminId && (
-                    <div className="flex items-center space-x-2">
-                      <label className="flex items-center text-sm">
-                        <input
-                          type="checkbox"
-                          checked={true} // Default to true if not available
-                          onChange={(e) =>
-                            handleUpdateSettings(member.username, e.target.checked, true)
-                          }
-                          className="mr-1"
-                        />
-                        Post
-                      </label>
-                      <label className="flex items-center text-sm">
-                        <input
-                          type="checkbox"
-                          checked={true} // Default to true if not available
-                          onChange={(e) =>
-                            handleUpdateSettings(member.username, true, e.target.checked)
-                          }
-                          className="mr-1"
-                        />
-                        Comment
-                      </label>
-                      <button
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                        onClick={() => handleRemoveMember(member.username)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ))
-            ) : (
-              <li className="text-gray-500">No members found.</li>
-            )}
-          </ul>
-          <div className="mt-4 flex justify-between">
-            <button
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-              onClick={() => setShowAllMembers(false)}
-            >
-              Back to Top 5
-            </button>
-            <div>
-              <button
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                onClick={() => setPage(page - 1)}
-                disabled={page === 0}
-              >
-                Previous
-              </button>
-              <button
-                className="ml-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                onClick={() => setPage(page + 1)}
-                disabled={allMembers?.last}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+      <button
+        className="p-2 bg-primary text-white font-xssss fw-600 rounded-3 mb-3 w-100 text-center"
+        onClick={() => setShowMembersModal(true)}
+      >
+        View All Members
+      </button>
 
+      {/* Top 5 Members List */}
+      <ul className="list-unstyled">
+        {top5Members && top5Members.length > 0 ? (
+          top5Members.map((member, index) => (
+            <li
+              key={member.userId}
+              className="d-flex align-items-center p-2 rounded-3 hover-bg-greylight"
+            >
+              <ProfilePhoto 
+                photoUrl={memberPhotoUrls[member.userId]} 
+                username={member.username} 
+              />
+              <div className="ms-3 d-flex align-items-center">
+                {renderMedal(index)}
+                <span className="font-xssss fw-500 text-grey-900">
+                  {member.firstName} {member.lastName} (@{member.username})
+                </span>
+                {member.userId === groupMembers?.find(m => m.isAdmin)?.id && (
+                  <span className="ms-2 font-xssss text-primary fw-600">(Admin)</span>
+                )}
+              </div>
+            </li>
+          ))
+        ) : groupMembers && groupMembers.length > 0 ? (
+          groupMembers.slice(0, 5).map((member, index) => (
+            <li
+              key={member.id}
+              className="d-flex align-items-center p-2 rounded-3 hover-bg-greylight"
+            >
+              <ProfilePhoto 
+                photoUrl={memberPhotoUrls[member.id]} 
+                username={member.username} 
+              />
+              <div className="ms-3 d-flex align-items-center">
+                {renderMedal(index)}
+                <span className="font-xssss fw-500 text-grey-900">
+                  {member.firstName || member.firstname} {member.lastName} (@{member.username})
+                </span>
+                {member.isAdmin && (
+                  <span className="ms-2 font-xssss text-primary fw-600">(Admin)</span>
+                )}
+              </div>
+            </li>
+          ))
+        ) : (
+          <li className="text-grey-500 font-xssss text-center py-3">No top members found.</li>
+        )}
+      </ul>
+
+      {/* All Members Modal */}
+      {
+        showMembersModal && (
+          <div className="modal-popup-wrap fixed inset-0 bg-black bg-opacity-50 d-flex align-items-center justify-content-center z-1000 mt-16">
+            <div className="modal-popup-body bg-white p-4 rounded-xxl shadow-xss w-100" style={{ maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto' }}>
+              <div className="card-body p-0 d-flex align-items-center border-bottom-xs mb-3">
+                <h3 className="fw-700 text-grey-900 font-xss mb-0">All Members</h3>
+                <a href="#" className="ms-auto font-xssss text-grey-500" onClick={() => setShowMembersModal(false)}>
+                  <i className="ti-close font-xss"></i>
+                </a>
+              </div>
+
+              <div className="d-flex mb-3 flex-column flex-md-row">
+                <div className="flex-1 me-md-2">
+                  <label className="font-xssss fw-600 text-grey-900 mb-1">Sort By:</label>
+                  <select
+                    value={sortBy}
+                    onChange={handleSortChange}
+                    className="w-100 p-2 border border-grey-200 rounded-3 font-xssss text-grey-900 focus-border-primary"
+                  >
+                    <option value="publicationCount">Publications</option>
+                    <option value="commentCount">Comments</option>
+                    <option value="reactionCount">Reactions</option>
+                    <option value="joinDate">Join Date</option>
+                  </select>
+                </div>
+                <div className="flex-1 ms-md-2">
+                  <label className="font-xssss fw-600 text-grey-900 mb-1">Direction:</label>
+                  <select
+                    value={direction}
+                    onChange={handleDirectionChange}
+                    className="w-100 p-2 border border-grey-200 rounded-3 font-xssss text-grey-900 focus-border-primary"
+                  >
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                </div>
+              </div>
+
+              {isAllLoading ? (
+                <LoadingSpinner />
+              ) : allMembers && allMembers.content && allMembers.content.length > 0 ? (
+                <div className="space-y-3">
+                  {allMembers.content.map((member, index) => (
+                    <MemberCard
+                      key={member.userId}
+                      member={member}
+                      index={index}
+                      groupId={groupIdToUse}
+                      isAdmin={isAdmin}
+                      photoUrl={memberPhotoUrls[member.userId]}
+                      renderMedal={renderMedal}
+                      handleRemoveMember={handleRemoveMember}
+                      handleUpdateSettings={handleUpdateSettings}
+                      isAdminMember={member.userId === groupMembers?.find(m => m.isAdmin)?.id}
+                    />
+                  ))}
+                </div>
+              ) : groupMembers && groupMembers.length > 0 ? (
+                <div className="space-y-3">
+                  {groupMembers.map((member, index) => (
+                    <MemberCard
+                      key={member.id}
+                      member={{ ...member, userId: member.id, firstName: member.firstName || member.firstname }}
+                      index={index}
+                      groupId={groupIdToUse}
+                      isAdmin={isAdmin}
+                      photoUrl={memberPhotoUrls[member.id]}
+                      renderMedal={renderMedal}
+                      handleRemoveMember={handleRemoveMember}
+                      handleUpdateSettings={handleUpdateSettings}
+                      isAdminMember={member.isAdmin}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-grey-500 font-xssss text-center py-3">No members found.</p>
+              )}
+
+              <div className="d-flex justify-content-between mt-3">
+                <button
+                  className="p-2 bg-primary text-white font-xssss fw-600 rounded-3 disabled-bg-greylight disabled-text-grey-500"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 0}
+                >
+                  Previous
+                </button>
+                <button
+                  className="p-2 bg-primary text-white font-xssss fw-600 rounded-3 disabled-bg-greylight disabled-text-grey-500"
+                  onClick={() => setPage(page + 1)}
+                  disabled={allMembers?.last}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* Membership Requests Section */}
       {isAdmin && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">Membership Requests</h3>
+        <div className="mt-4">
+          <h3 className="fw-700 text-grey-900 font-xsss mb-3">Membership Requests</h3>
           <div className="space-y-3">
             {!requests || requests.length === 0 ? (
-              <p className="text-gray-500">No pending requests.</p>
+              <p className="text-grey-500 font-xssss text-center py-3">No pending requests.</p>
             ) : (
               requests
                 .filter((request) => request.status === 'PENDING')
                 .map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={requestPhotoUrls[request.userId] || '/default-avatar.png'}
-                        alt={request.username}
-                        className="w-10 h-10 rounded-full object-cover"
+                  <div key={request.id} className="d-flex align-items-center justify-content-between p-3 bg-greylight rounded-3 hover-bg-grey-100">
+                    <div className="d-flex align-items-center">
+                      <ProfilePhoto 
+                        photoUrl={requestPhotoUrls[request.userId]} 
+                        username={request.username}
                       />
-                      <span className="text-gray-700">{request.username}</span>
+                      <span className="ms-3 font-xssss fw-500 text-grey-900">{request.username}</span>
                     </div>
-                    <div className="space-x-2">
+                    <div className="d-flex ms-2">
                       <button
                         onClick={() => handleRequestAction(request.id, 'ACCEPTED')}
                         disabled={isHandling}
-                        className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        className="p-2 bg-success text-white font-xssss fw-600 rounded-3 ms-2 disabled-bg-greylight disabled-text-grey-500"
                       >
                         Accept
                       </button>
                       <button
                         onClick={() => handleRequestAction(request.id, 'REJECTED')}
                         disabled={isHandling}
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        className="p-2 bg-danger text-white font-xssss fw-600 rounded-3 ms-2 disabled-bg-greylight disabled-text-grey-500"
                       >
                         Reject
                       </button>
@@ -460,14 +387,122 @@ const GroupMemberList = ({ groupId, isAdmin, groupMembers }) => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
 
-      {selectedMember && (
-        <MemberStatsModal
-          groupId={groupIdToUse}
-          username={selectedMember.username}
-          onClose={() => setSelectedMember(null)}
-        />
-      )}
+// Member Card Component
+const MemberCard = ({ member, index, groupId, isAdmin, photoUrl, renderMedal, handleRemoveMember, handleUpdateSettings, isAdminMember }) => {
+  const { data: stats, isLoading: isStatsLoading } = useMemberStats(groupId, member.username);
+  const [canPost, setCanPost] = useState(member.canPost ?? true);
+  const [canComment, setCanComment] = useState(member.canComment ?? true);
+
+  const handleToggle = (type, value) => {
+    if (type === 'post') {
+      setCanPost(value);
+      handleUpdateSettings(member.username, value, canComment);
+    } else {
+      setCanComment(value);
+      handleUpdateSettings(member.username, canPost, value);
+    }
+  };
+
+  return (
+    <div className="card-body p-3 bg-greylight rounded-3 hover-bg-grey-100">
+      <div className="d-flex align-items-start justify-content-between">
+        <div className="d-flex align-items-center">
+          <ProfilePhoto 
+            photoUrl={photoUrl} 
+            username={member.username}
+            className="w100 h100 rounded-circle object-cover border-2 border-grey-200"
+          />
+          <div className="ms-3">
+            <div className="d-flex align-items-center">
+              {renderMedal(index)}
+              <span className="ms-2 font-xsss fw-600 text-grey-900">
+                {member.firstName} {member.lastName} (@{member.username})
+              </span>
+              {isAdminMember && (
+                <span className="ms-2 font-xssss text-primary fw-600">(Admin)</span>
+              )}
+            </div>
+            {isStatsLoading ? (
+              <LoadingSpinner size="sm" />
+            ) : stats && (
+              <div className="d-flex flex-column font-xssss text-grey-900 mt-2">
+                <div className="d-flex align-items-center">
+                  <i className="feather-file-text text-grey-500 me-2 font-md"></i>
+                  <span>Publications: <strong>{stats.publicationCount}</strong></span>
+                </div>
+                <div className="d-flex align-items-center">
+                  <i className="feather-message-circle text-grey-500 me-2 font-md"></i>
+                  <span>Comments: <strong>{stats.commentCount}</strong></span>
+                </div>
+                <div className="d-flex align-items-center">
+                  <i className="feather-thumbs-up text-grey-500 me-2 font-md"></i>
+                  <span>Reactions: <strong>{stats.reactionCount}</strong></span>
+                </div>
+                <div className="d-flex align-items-center">
+                  <i className="feather-calendar text-grey-500 me-2 font-md"></i>
+                  <span>Join Date: <strong>{new Date(stats.joinDate).toLocaleDateString()}</strong></span>
+                </div>
+                <div className="d-flex align-items-center">
+                  <i className="feather-message-square text-grey-500 me-2 font-md"></i>
+                  <span>Last Comment: <strong>{stats.lastCommentDate ? new Date(stats.lastCommentDate).toLocaleDateString() : 'N/A'}</strong></span>
+                </div>
+                <div className="d-flex align-items-center">
+                  <i className="feather-edit text-grey-500 me-2 font-md"></i>
+                  <span>Last Publication: <strong>{stats.lastPublicationDate ? new Date(stats.lastPublicationDate).toLocaleDateString() : 'N/A'}</strong></span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {isAdmin && !isAdminMember && (
+          <div className="d-flex flex-column align-items-end">
+            <div className="d-flex align-items-center mb-2">
+              <div className="d-flex align-items-center me-2">
+                <span className="font-xssss text-grey-900 me-1">Post</span>
+                <label className="relative inline-flex items-center cursor-pointer p-1">
+                  <input
+                    type="checkbox"
+                    checked={canPost}
+                    onChange={() => handleToggle('post', !canPost)}
+                    className="sr-only"
+                  />
+                  <div className={`w-6 h-3 rounded-3 ${canPost ? 'bg-primary' : 'bg-greylight'} transition-colors duration-200`}>
+                    <span
+                      className={`w-3 h-3 rounded-circle bg-white absolute top-0.001 left-0.5 transition-transform duration-200 ${canPost ? 'translate-x-4' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </label>
+              </div>
+              <div className="d-flex align-items-center">
+                <span className="font-xssss text-grey-900 me-1">Comment</span>
+                <label className="relative inline-flex items-center cursor-pointer p-1">
+                  <input
+                    type="checkbox"
+                    checked={canComment}
+                    onChange={() => handleToggle('comment', !canComment)}
+                    className="sr-only"
+                  />
+                  <div className={`w-6 h-3 rounded-3 ${canComment ? 'bg-primary' : 'bg-greylight'} transition-colors duration-200`}>
+                    <span
+                      className={`w-3 h-3 rounded-circle bg-white absolute top-0.001 left-0.5 transition-transform duration-200 ${canComment ? 'translate-x-4' : 'translate-x-0'}`}
+                    />
+                  </div>
+                </label>
+              </div>
+            </div>
+            <button
+              className="p-1 bg-danger text-white font-xssss fw-600 rounded-3 w-75 text-center hover-bg-danger-dark transition-colors duration-200"
+              onClick={() => handleRemoveMember(member.username)}
+            >
+              Remove
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

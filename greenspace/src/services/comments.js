@@ -15,7 +15,9 @@ const fetchPublicationComments = async ({ publicationId, page = 0, size = 10, to
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || 'Failed to fetch comments');
   }
-  return response.json();
+  const data = await response.json();
+  console.log('Fetched publication comments:', data); // Debug logging
+  return data;
 };
 
 // Fetch comment replies
@@ -34,7 +36,9 @@ const fetchCommentReplies = async ({ commentId, token }) => {
     throw new Error(errorData.message || 'Failed to fetch comment replies');
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('Fetched comment replies:', data); // Debug logging
+  return data;
 };
 
 // Add comment to publication
@@ -161,21 +165,28 @@ export const usePublicationComments = (publicationId, page, size) => {
     queryFn: () => fetchPublicationComments({ publicationId, page, size, token }),
     enabled: !!publicationId && !!token,
     keepPreviousData: true,
-    select: (data) => ({
-      ...data,
-      content: data.content.map((comment) => ({
-        id: comment.id,
-        content: comment.content,
-        user: {
-          id: comment.user?.id,
-          username: comment.user?.username,
-        },
-        publicationId: comment.publicationId,
-        parentCommentId: comment.parentCommentId,
-        createDate: comment.createDate,
-        isEdited: comment.isEdited,
-      })),
-    }),
+    select: (data) => {
+      const transformedData = {
+        ...data,
+        content: data.content.map((comment) => ({
+          id: comment.id,
+          content: comment.content,
+          user: {
+            id: comment.user?.id,
+            username: comment.user?.username,
+            firstname: comment.user?.firstname,
+            lastName: comment.user?.lastName,
+            photoProfile: comment.user?.photoProfile,
+          },
+          publicationId: comment.publicationId,
+          parentCommentId: comment.parentCommentId,
+          createDate: comment.createDate,
+          isEdited: comment.isEdited,
+        })),
+      };
+      console.log('Transformed publication comments:', transformedData); // Debug logging
+      return transformedData;
+    },
   });
 };
 
@@ -186,19 +197,25 @@ export const useCommentReplies = (commentId) => {
     queryKey: ['commentReplies', commentId],
     queryFn: () => fetchCommentReplies({ commentId, token }),
     enabled: !!commentId && !!token,
-    select: (data) =>
-      data.map((reply) => ({
+    select: (data) => {
+      const transformedData = data.map((reply) => ({
         id: reply.id,
         content: reply.content,
         user: {
           id: reply.user?.id,
           username: reply.user?.username,
+          firstname: reply.user?.firstname,
+          lastName: reply.user?.lastName,
+          photoProfile: reply.user?.photoProfile,
         },
         publicationId: reply.publicationId,
         parentCommentId: reply.parentCommentId,
         createDate: reply.createDate,
         isEdited: reply.isEdited,
-      })),
+      }));
+      console.log('Transformed comment replies:', transformedData); // Debug logging
+      return transformedData;
+    },
   });
 };
 
@@ -230,18 +247,20 @@ export const useReplyToComment = () => {
 };
 
 export const useUpdateComment = () => {
-  const token = useSelector((state) => state.auth.token);
-  const queryClient = useQueryClient();
+  childhood: {
+    const token = useSelector((state) => state.auth.token);
+    const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({ id, commentData }) => updateComment({ id, commentData, token }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['publicationComments', data.publicationId]);
-      if (data.parentCommentId) {
-        queryClient.invalidateQueries(['commentReplies', data.parentCommentId]);
-      }
-    },
-  });
+    return useMutation({
+      mutationFn: ({ id, commentData }) => updateComment({ id, commentData, token }),
+      onSuccess: (data) => {
+        queryClient.invalidateQueries(['publicationComments', data.publicationId]);
+        if (data.parentCommentId) {
+          queryClient.invalidateQueries(['commentReplies', data.parentCommentId]);
+        }
+      },
+    });
+  }
 };
 
 export const useDeleteComment = () => {
@@ -249,7 +268,7 @@ export const useDeleteComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutation_FN: ({ id, publicationId, parentCommentId }) =>
+    mutationFn: ({ id, publicationId, parentCommentId }) =>
       deleteComment({ id, publicationId, parentCommentId, token }),
     onSuccess: (data) => {
       queryClient.invalidateQueries(['publicationComments', data.publicationId]);

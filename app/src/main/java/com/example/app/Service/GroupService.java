@@ -42,6 +42,8 @@ public class GroupService implements IGroupService {
 
     @Autowired
     private ReactionRepository reactionRepository;
+    @Autowired
+    private UserRepo userRepo;
 
     @Value("${file.upload-dir:uploads}")
     private String uploadDir;
@@ -274,5 +276,42 @@ public class GroupService implements IGroupService {
         settings.setPublicationCount(publicationRepository.countByGroupIdAndUserId(groupId, userId));
         settings.setCommentCount(commentRepository.countByGroupIdAndUserId(groupId, userId));
         settings.setReactionCount(reactionRepository.countByGroupIdAndUserId(groupId, userId));
+    }
+    @Override
+    public GroupMemberStats getMemberStats(Long groupId, Long userId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found with id: " + groupId));
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        GroupMemberStats stats = new GroupMemberStats();
+        stats.setUserId(userId);
+        stats.setUsername(user.getUsername());
+        stats.setFirstName(user.getFirstname());
+        stats.setLastName(user.getLastName());
+
+        // Join date
+        GroupMemberSettings settings = group.getMemberSettings().stream()
+                .filter(s -> s.getUser().getId().equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Member settings not found"));
+        stats.setJoinDate(settings.getJoinDate());
+
+        // Counts
+        stats.setPublicationCount(publicationRepository.countByGroupIdAndUserId(groupId, userId));
+        stats.setCommentCount(commentRepository.countByGroupIdAndUserId(groupId, userId));
+        stats.setReactionCount(reactionRepository.countByGroupIdAndUserId(groupId, userId));
+
+        // Last activity dates
+        Pageable top1 = PageRequest.of(0, 1);
+        List<LocalDateTime> lastPublicationDates = publicationRepository
+                .findLastPublicationDateByGroupIdAndUserId(groupId, userId, top1);
+        stats.setLastPublicationDate(lastPublicationDates.isEmpty() ? null : lastPublicationDates.get(0));
+
+        List<LocalDateTime> lastCommentDates = commentRepository
+                .findLastCommentDateByGroupIdAndUserId(groupId, userId, top1);
+        stats.setLastCommentDate(lastCommentDates.isEmpty() ? null : lastCommentDates.get(0));
+
+        return stats;
     }
 }

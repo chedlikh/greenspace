@@ -1,13 +1,14 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { usePublicationComments, useAddComment, usePublicationCommentCount } from '../../../services/comments';
 import { toast } from 'react-toastify';
 import CommentItem from './CommentItem';
 import LoadingSpinner from '../../FrontOffice/LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import { useSelector } from 'react-redux';
-import UserAvatar from './UserAvatar';
 
 const CommentSection = ({ publicationId }) => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8089";
   const [page, setPage] = useState(0);
   const [size] = useState(5);
   const [commentText, setCommentText] = useState('');
@@ -53,6 +54,10 @@ const CommentSection = ({ publicationId }) => {
   const totalComments = commentCount || 0;
   const displayedComments = commentsData?.content?.filter(comment => !comment.parentCommentId) || [];
   const remainingComments = (commentsData?.totalElements || 0) - ((page + 1) * size);
+  
+  const userName = user 
+    ? `${user.firstname || ''} ${user.lastName || ''}`.trim() || user.username || 'Anonymous User'
+    : 'Anonymous User';
 
   return (
     <div className="space-y-6">
@@ -61,13 +66,21 @@ const CommentSection = ({ publicationId }) => {
       </h3>
       
       <form onSubmit={handleSubmit} className="flex items-start space-x-3">
-        <UserAvatar user={user} size="sm" />
+        <img
+          src={user?.photoProfile ? `${API_BASE_URL}/images/${user.photoProfile}` : '/default-avatar.png'}
+          alt={userName}
+          className="w-10 h-10 rounded-full object-cover"
+          onError={(e) => {
+            e.target.src = '/default-avatar.png';
+            e.target.onerror = null;
+          }}
+        />
         <div className="flex-1">
           <textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             placeholder="Write a comment..."
-            className="w-full p-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            className="w-full p-4 bg-white border border-gray-200 rounded-3xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             rows={3}
             disabled={isAdding}
           />
@@ -75,7 +88,7 @@ const CommentSection = ({ publicationId }) => {
             <button
               type="submit"
               disabled={isAdding || !commentText.trim()}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 transition-all"
+              className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-3xl hover:bg-indigo-700 disabled:opacity-50 transition-all"
             >
               {isAdding ? 'Posting...' : 'Post Comment'}
             </button>
@@ -107,6 +120,10 @@ const CommentSection = ({ publicationId }) => {
       )}
     </div>
   );
+};
+
+CommentSection.propTypes = {
+  publicationId: PropTypes.number.isRequired,
 };
 
 export default CommentSection;

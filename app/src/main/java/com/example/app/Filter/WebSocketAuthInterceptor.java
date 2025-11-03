@@ -43,13 +43,20 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
                         accessor.setUser(auth);
+                        // Dans la méthode preSend, après avoir authentifié l'utilisateur
+                        logger.info("WebSocket user authenticated: " + username + " with principal: " +
+                                (accessor.getUser() != null ? accessor.getUser().getName() : "null"));
+
                     }
+
                 } catch (Exception e) {
+
                     logger.error("WebSocket authentication failed", e);
                     throw new MessagingException("Authentication failed");
                 }
             }
         }
+
         return message;
     }
 }
